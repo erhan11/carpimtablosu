@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
+import type { RecoveryKind } from '@/lib/flow/flowEngine'
+import { useFlowGameSession } from '@/lib/flow/useFlowGameSession'
 import { getDifficultyTierKey } from '@/lib/difficulty/difficultyTier'
 import {
   correctAnswerFor,
@@ -32,33 +34,53 @@ export function MixedChallengeGame() {
   const expertTimerMs = useProgressStore((s) => s.expertTimerMs ?? 5000)
   const difficultyScale = useProgressStore((s) => s.difficultyScale ?? 1)
 
-  const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
-
-  const questions = useMemo(() => {
-    const qs: GameQuestion[] = []
-    for (let i = 0; i < TOTAL; i += 1) {
-      qs.push(
-        pickGameQuestionForSession(unlocked, weak, {
-          advancedMode,
-          expertMode,
-          difficultyScale,
-          mixedOnly: true,
-        }),
-      )
-    }
-    return qs
-  }, [unlocked, weak, advancedMode, expertMode, difficultyScale])
+  const {
+    pickIntent,
+    syncStreakFromGame,
+    bumpFrustrationAfterAnswer,
+    shouldSuggestBreak,
+    setBreakDismissed,
+  } = useFlowGameSession()
 
   const [index, setIndex] = useState(0)
+  const [game, setGame] = useState<GameQuestion | null>(null)
   const [done, setDone] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [streak, setStreak] = useState(0)
   const [timeLeft, setTimeLeft] = useState(0)
+  const [flowRecovery, setFlowRecovery] = useState<RecoveryKind>('none')
   const questionShownAt = useRef(0)
   const gameRef = useRef<GameQuestion | null>(null)
   const answeredThisQuestion = useRef(false)
 
-  const game = questions[index] ?? questions[0]!
+  const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
+
+  const loadQuestion = useCallback(
+    (slotIndex: number) => {
+      const { intent } = pickIntent(slotIndex, true)
+      setFlowRecovery(intent.recoveryKind)
+      const g = pickGameQuestionForSession(unlocked, weak, {
+        advancedMode,
+        expertMode,
+        difficultyScale,
+        mixedOnly: true,
+        flowIntent: intent,
+      })
+      setGame(g)
+    },
+    [pickIntent, unlocked, weak, advancedMode, expertMode, difficultyScale],
+  )
+
+  useEffect(() => {
+    if (done) return
+    queueMicrotask(() => {
+      loadQuestion(index)
+    })
+  }, [index, done, loadQuestion])
+
+  useEffect(() => {
+    if (game) syncStreakFromGame(game)
+  }, [game, syncStreakFromGame])
 
   useEffect(() => {
     gameRef.current = game
@@ -72,6 +94,7 @@ export function MixedChallengeGame() {
   const [choices, setChoices] = useState<number[]>([])
 
   useEffect(() => {
+    if (!game) return
     answeredThisQuestion.current = false
     questionShownAt.current = responseClockMs()
     const correct = correctAnswerFor(game)
@@ -102,6 +125,7 @@ export function MixedChallengeGame() {
       if (!g) return
       const ms = Math.round(responseClockMs() - questionShownAt.current)
       recordAnswer({ gameId: 'mixed', question: g.base, correct: ok, responseMs: ms })
+      bumpFrustrationAfterAnswer()
       setMsg(ok ? t('common:feedback.doingGreat') : t('common:feedback.tryAgain'))
       if (ok) {
         setStreak((s) => {
@@ -121,7 +145,7 @@ export function MixedChallengeGame() {
         setIndex((i) => i + 1)
       }, 550)
     },
-    [applyComboRewards, index, onComplete, recordAnswer, t],
+    [applyComboRewards, bumpFrustrationAfterAnswer, index, onComplete, recordAnswer, t],
   )
 
   const onTimeExpired = useCallback(() => {
@@ -135,6 +159,7 @@ export function MixedChallengeGame() {
       correct: false,
       responseMs: expertTimerMs,
     })
+    bumpFrustrationAfterAnswer()
     setStreak(0)
     setMsg(t('common:feedback.tryAgain'))
     window.setTimeout(() => {
@@ -145,11 +170,11 @@ export function MixedChallengeGame() {
       }
       setIndex((i) => i + 1)
     }, 550)
-  }, [expertTimerMs, index, onComplete, recordAnswer, t])
+  }, [bumpFrustrationAfterAnswer, expertTimerMs, index, onComplete, recordAnswer, t])
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- per-question timer reset */
-    if (!expertMode || !expertTimerEnabled || done) {
+    if (!game || !expertMode || !expertTimerEnabled || done) {
       setTimeLeft(0)
       return
     }
@@ -173,17 +198,41 @@ export function MixedChallengeGame() {
     if (done) return
     if (answeredThisQuestion.current) return
     answeredThisQuestion.current = true
-    const ok = n === correctAnswerFor(game)
+    const ok = n === correctAnswerFor(game!)
     advanceOrComplete(ok)
   }
 
-  const prompt = formatQuestionPrompt(game)
+  const prompt = game ? formatQuestionPrompt(game) : ''
   const comboMult =
     streak >= 10 ? 5 : streak >= 5 ? 3 : streak >= 3 ? 2 : expertMode && streak > 0 ? 1 : 0
 
   return (
     <MainLayout title={t('games:mixed.title')} showBackTo="/games" headerRight={difficultyBadge}>
       <div className="text-sm text-[var(--muted)]">{t('games:mixed.subtitle')}</div>
+      {!done && shouldSuggestBreak ? (
+        <Card className="mt-3 border-[var(--primary)]/30 bg-[var(--primary)]/5">
+          <div className="text-center text-lg font-extrabold">{t('games:flow.breakTitle')}</div>
+          <div className="mt-1 text-center text-sm text-[var(--muted)]">{t('games:flow.breakBody')}</div>
+          <div className="mt-3 flex justify-center">
+            <BigButton variant="primary" onClick={() => setBreakDismissed(true)}>
+              {t('games:flow.breakDismiss')}
+            </BigButton>
+          </div>
+        </Card>
+      ) : null}
+      {!done && flowRecovery === 'switch_mode' ? (
+        <div className="mt-2 rounded-lg bg-black/5 px-3 py-2 text-center text-sm text-[var(--muted)]">
+          {t('games:flow.recoverySwitch')}{' '}
+          <Link to="/games/mixed" className="font-extrabold text-[var(--primary-dark)] underline">
+            {t('games:flow.tryMixed')}
+          </Link>
+        </div>
+      ) : null}
+      {!done && flowRecovery === 'short_challenge' ? (
+        <div className="mt-2 rounded-lg bg-black/5 px-3 py-2 text-center text-sm text-[var(--muted)]">
+          {t('games:flow.recoveryShort')}
+        </div>
+      ) : null}
       {expertMode && expertTimerEnabled && !done ? (
         <div className="mt-2 text-sm font-extrabold text-[var(--muted)]">
           {t('games:expert.questionTime', { s: (timeLeft / 1000).toFixed(1) })}
@@ -201,7 +250,7 @@ export function MixedChallengeGame() {
             {t('games:expert.combo', { n: comboMult })}
           </div>
         ) : null}
-        {!done ? (
+        {!done && game ? (
           <>
             <div className="mt-4 text-center text-4xl font-extrabold leading-tight">{prompt}</div>
             {msg ? (
@@ -215,9 +264,13 @@ export function MixedChallengeGame() {
               ))}
             </div>
           </>
-        ) : (
+        ) : null}
+        {!done && !game ? (
+          <div className="mt-4 text-center text-sm text-[var(--muted)]">{t('common:loading')}</div>
+        ) : null}
+        {done ? (
           <div className="mt-4 text-center text-xl font-extrabold">{t('games:mixed.complete')}</div>
-        )}
+        ) : null}
       </Card>
 
       <div className="mt-4">

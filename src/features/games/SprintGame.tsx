@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
+import type { RecoveryKind } from '@/lib/flow/flowEngine'
+import { useFlowGameSession } from '@/lib/flow/useFlowGameSession'
 import { getDifficultyTierKey } from '@/lib/difficulty/difficultyTier'
 import {
   correctAnswerFor,
@@ -15,6 +17,8 @@ import {
 import { shuffleInPlace } from '@/lib/math/shuffle'
 import { responseClockMs } from '@/lib/perf'
 import { useProgressStore, useWeakKeys } from '@/lib/progress/store'
+
+const ROUND_LEN = 10
 
 export function SprintGame() {
   const { t, i18n } = useTranslation(['games', 'common'])
@@ -30,32 +34,50 @@ export function SprintGame() {
   const expertTimerMs = useProgressStore((s) => s.expertTimerMs ?? 5000)
   const difficultyScale = useProgressStore((s) => s.difficultyScale ?? 1)
 
+  const {
+    pickIntent,
+    syncStreakFromGame,
+    bumpFrustrationAfterAnswer,
+    shouldSuggestBreak,
+    setBreakDismissed,
+  } = useFlowGameSession()
+
   const [index, setIndex] = useState(0)
+  const [game, setGame] = useState<GameQuestion | null>(null)
   const [streak, setStreak] = useState(0)
   const [msg, setMsg] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState(0)
+  const [flowRecovery, setFlowRecovery] = useState<RecoveryKind>('none')
   const questionShownAt = useRef(0)
   const gameRef = useRef<GameQuestion | null>(null)
-  /** Cancels timer expiry if user already answered this question. */
   const answeredThisQuestion = useRef(false)
 
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
 
-  const questions = useMemo(() => {
-    const qs: GameQuestion[] = []
-    for (let i = 0; i < 10; i += 1) {
-      qs.push(
-        pickGameQuestionForSession(unlocked, weak, {
-          advancedMode,
-          expertMode,
-          difficultyScale,
-        }),
-      )
-    }
-    return qs
-  }, [unlocked, weak, advancedMode, expertMode, difficultyScale])
+  const loadQuestion = useCallback(
+    (slotIndex: number) => {
+      const { intent } = pickIntent(slotIndex)
+      setFlowRecovery(intent.recoveryKind)
+      const g = pickGameQuestionForSession(unlocked, weak, {
+        advancedMode,
+        expertMode,
+        difficultyScale,
+        flowIntent: intent,
+      })
+      setGame(g)
+    },
+    [pickIntent, unlocked, weak, advancedMode, expertMode, difficultyScale],
+  )
 
-  const game = questions[index] ?? questions[0]!
+  useEffect(() => {
+    queueMicrotask(() => {
+      loadQuestion(index)
+    })
+  }, [index, loadQuestion])
+
+  useEffect(() => {
+    if (game) syncStreakFromGame(game)
+  }, [game, syncStreakFromGame])
 
   useEffect(() => {
     gameRef.current = game
@@ -69,6 +91,7 @@ export function SprintGame() {
   const [choices, setChoices] = useState<number[]>([])
 
   useEffect(() => {
+    if (!game) return
     answeredThisQuestion.current = false
     questionShownAt.current = responseClockMs()
     const correct = correctAnswerFor(game)
@@ -80,8 +103,8 @@ export function SprintGame() {
   }, [game])
 
   const advanceIndex = useCallback(() => {
-    setIndex((i) => (i + 1 < questions.length ? i + 1 : 0))
-  }, [questions.length])
+    setIndex((i) => (i + 1 < ROUND_LEN ? i + 1 : 0))
+  }, [])
 
   const applyComboRewards = useCallback(
     (nextStreak: number) => {
@@ -99,6 +122,7 @@ export function SprintGame() {
       const g = gameRef.current
       if (!g) return
       recordAnswer({ gameId: 'sprint', question: g.base, correct: ok, responseMs })
+      bumpFrustrationAfterAnswer()
       if (ok) {
         setStreak((s) => {
           const nextStreak = s + 1
@@ -115,7 +139,7 @@ export function SprintGame() {
         advanceIndex()
       }, 550)
     },
-    [advanceIndex, applyComboRewards, recordAnswer, t],
+    [advanceIndex, applyComboRewards, bumpFrustrationAfterAnswer, recordAnswer, t],
   )
 
   const onTimeExpired = useCallback(() => {
@@ -129,17 +153,18 @@ export function SprintGame() {
       correct: false,
       responseMs: expertTimerMs,
     })
+    bumpFrustrationAfterAnswer()
     setStreak(0)
     setMsg(t('common:feedback.tryAgain'))
     window.setTimeout(() => {
       setMsg(null)
       advanceIndex()
     }, 550)
-  }, [advanceIndex, expertTimerMs, recordAnswer, t])
+  }, [advanceIndex, bumpFrustrationAfterAnswer, expertTimerMs, recordAnswer, t])
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- per-question timer reset */
-    if (!expertMode || !expertTimerEnabled) {
+    if (!game || !expertMode || !expertTimerEnabled) {
       setTimeLeft(0)
       return
     }
@@ -160,6 +185,7 @@ export function SprintGame() {
   }, [index, game, expertMode, expertTimerEnabled, expertTimerMs, onTimeExpired])
 
   function pick(n: number) {
+    if (!game) return
     if (answeredThisQuestion.current) return
     answeredThisQuestion.current = true
     const ok = n === correctAnswerFor(game)
@@ -167,13 +193,37 @@ export function SprintGame() {
     finishQuestion(ok, ms)
   }
 
-  const prompt = formatQuestionPrompt(game)
+  const prompt = game ? formatQuestionPrompt(game) : ''
   const comboMult =
     streak >= 10 ? 5 : streak >= 5 ? 3 : streak >= 3 ? 2 : expertMode && streak > 0 ? 1 : 0
 
   return (
     <MainLayout title={t('games:sprint.title')} showBackTo="/games" headerRight={difficultyBadge}>
       <div className="text-sm text-[var(--muted)]">{t('games:sprint.subtitle')}</div>
+      {shouldSuggestBreak ? (
+        <Card className="mt-3 border-[var(--primary)]/30 bg-[var(--primary)]/5">
+          <div className="text-center text-lg font-extrabold">{t('games:flow.breakTitle')}</div>
+          <div className="mt-1 text-center text-sm text-[var(--muted)]">{t('games:flow.breakBody')}</div>
+          <div className="mt-3 flex justify-center">
+            <BigButton variant="primary" onClick={() => setBreakDismissed(true)}>
+              {t('games:flow.breakDismiss')}
+            </BigButton>
+          </div>
+        </Card>
+      ) : null}
+      {flowRecovery === 'switch_mode' ? (
+        <div className="mt-2 rounded-lg bg-black/5 px-3 py-2 text-center text-sm text-[var(--muted)]">
+          {t('games:flow.recoverySwitch')}{' '}
+          <Link to="/games/mixed" className="font-extrabold text-[var(--primary-dark)] underline">
+            {t('games:flow.tryMixed')}
+          </Link>
+        </div>
+      ) : null}
+      {flowRecovery === 'short_challenge' ? (
+        <div className="mt-2 rounded-lg bg-black/5 px-3 py-2 text-center text-sm text-[var(--muted)]">
+          {t('games:flow.recoveryShort')}
+        </div>
+      ) : null}
       {!expertMode || !expertTimerEnabled ? (
         <div className="mt-2 text-sm font-extrabold">{t('games:sprint.noTimer')}</div>
       ) : (
@@ -194,17 +244,23 @@ export function SprintGame() {
             {t('games:expert.combo', { n: comboMult })}
           </div>
         ) : null}
-        <div className="mt-4 text-center text-5xl font-extrabold leading-tight">{prompt}</div>
-        {msg ? (
-          <div className="mt-3 text-center text-lg font-extrabold text-[var(--primary-dark)]">{msg}</div>
-        ) : null}
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          {choices.map((n) => (
-            <BigButton key={`${n}-${index}`} variant="primary" onClick={() => pick(n)}>
-              {new Intl.NumberFormat(locale).format(n)}
-            </BigButton>
-          ))}
-        </div>
+        {game ? (
+          <>
+            <div className="mt-4 text-center text-5xl font-extrabold leading-tight">{prompt}</div>
+            {msg ? (
+              <div className="mt-3 text-center text-lg font-extrabold text-[var(--primary-dark)]">{msg}</div>
+            ) : null}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {choices.map((n) => (
+                <BigButton key={`${n}-${index}`} variant="primary" onClick={() => pick(n)}>
+                  {new Intl.NumberFormat(locale).format(n)}
+                </BigButton>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="mt-4 text-center text-sm text-[var(--muted)]">{t('common:loading')}</div>
+        )}
       </Card>
 
       <div className="mt-4">

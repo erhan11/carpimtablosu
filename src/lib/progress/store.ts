@@ -14,6 +14,13 @@ import { AVATARS } from '@/content/cosmetics/avatars'
 import { THEMES } from '@/content/cosmetics/themes'
 import { handleLevelRewards } from '@/lib/cosmetics/levelRewards'
 import { normalizeCosmetics } from '@/lib/cosmetics/normalize'
+import {
+  adjustDifficulty,
+  detectBoredom,
+  detectFrustration,
+  flowScore,
+  updateFlowMetrics,
+} from '@/lib/flow/flowEngine'
 import { fastTrackTableIds } from '@/lib/math/advancedQuestions'
 import {
   PROGRESS_VERSION,
@@ -304,18 +311,34 @@ export const useProgressStore = create<ProgressState>()(
           let xp = state.xp
           let level = state.level
           let cosmetics = normalizeCosmetics(state.cosmetics)
-          let difficultyScale = state.difficultyScale ?? 1
+          const prevScale = state.difficultyScale ?? 1
+          let difficultyScale = prevScale
           const perfBuf = [...(state.performanceBuffer ?? [])]
+          let didPushPerf = false
           if (responseMs !== undefined && responseMs >= 0 && responseMs < 120_000) {
             perfBuf.push({ correct, ms: responseMs })
-            while (perfBuf.length > 50) perfBuf.shift()
-          }
-          const expertOn = state.expertMode === true
-          if (correct && responseMs !== undefined && responseMs < 2500) {
-            difficultyScale = Math.min(1.28, difficultyScale + 0.02)
+            didPushPerf = true
           } else if (!correct) {
-            const dec = expertOn ? 0.08 : 0.05
-            difficultyScale = Math.max(0.72, difficultyScale - dec)
+            perfBuf.push({ correct: false, ms: 5000 })
+            didPushPerf = true
+          }
+          while (perfBuf.length > 50) perfBuf.shift()
+          if (didPushPerf) {
+            const metrics = updateFlowMetrics(perfBuf)
+            const frustration = detectFrustration(metrics)
+            const boredom = detectBoredom(metrics)
+            const fs = flowScore(metrics)
+            difficultyScale = adjustDifficulty({
+              currentScale: prevScale,
+              frustration,
+              boredom,
+              flowScore: fs,
+            })
+            if (Math.round(prevScale * 100) !== Math.round(difficultyScale * 100)) {
+              console.info(
+                `difficultyScale: ${prevScale.toFixed(2)} → ${difficultyScale.toFixed(2)}`,
+              )
+            }
           }
           let tableMastery = { ...state.tableMastery }
           let tableStats = { ...state.tableStats }
@@ -701,7 +724,7 @@ export const useProgressStore = create<ProgressState>()(
           : c.performanceBuffer
         merged.difficultyScale =
           typeof p.difficultyScale === 'number' && Number.isFinite(p.difficultyScale)
-            ? Math.min(1.35, Math.max(0.65, p.difficultyScale))
+            ? Math.min(1.3, Math.max(0.7, p.difficultyScale))
             : c.difficultyScale
         merged.speedBestApm =
           typeof p.speedBestApm === 'number' && Number.isFinite(p.speedBestApm)

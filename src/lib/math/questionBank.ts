@@ -75,6 +75,67 @@ export function factInvolvesUnlockedTables(q: Question, unlockedTableIds: TableI
   return isTableUnlocked(unlockedTableIds, q.a) && isTableUnlocked(unlockedTableIds, q.b)
 }
 
+/** Retry pick until fact key is not in avoid set (bounded attempts). */
+export function pickQuestionAvoiding(pick: () => Question, avoidKeys: Set<string>, maxAttempts = 8): Question {
+  for (let i = 0; i < maxAttempts; i += 1) {
+    const q = pick()
+    if (!avoidKeys.has(factKey(q))) return q
+  }
+  return pick()
+}
+
+/** Prefer a weak fact for reinforcement (flow engine weak slot). */
+export function pickQuestionForcedWeak(
+  unlockedTables: TableId[],
+  weakKeys: string[],
+  avoidKeys: Set<string>,
+): Question {
+  const candidates = weakKeys.filter((k) => {
+    const q = parseFactKeyString(k)
+    if (!q || !factInvolvesUnlockedTables(q, unlockedTables)) return false
+    return !avoidKeys.has(factKey(q))
+  })
+  if (candidates.length === 0) {
+    return pickQuestionAvoiding(() => pickQuestion(unlockedTables, weakKeys), avoidKeys)
+  }
+  const k = candidates[randomInt(0, candidates.length - 1)]!
+  const q = parseFactKeyString(k)
+  return q ?? pickQuestion(unlockedTables, weakKeys)
+}
+
+/** Single-table practice (frustration / recovery). */
+export function pickSingleTableQuestion(
+  unlockedTables: TableId[],
+  weakKeys: string[],
+  preferPlanFocusTables: number[],
+  avoidKeys: Set<string>,
+): Question {
+  const tables = unlockedTables.map(parseTableId).filter((n) => n >= 1 && n <= 10)
+  if (tables.length === 0) {
+    return { a: 1, b: randomInt(1, 10) }
+  }
+  const weakTables = new Set<number>()
+  for (const k of weakKeys) {
+    const q = parseFactKeyString(k)
+    if (q && factInvolvesUnlockedTables(q, unlockedTables)) {
+      weakTables.add(q.a)
+      weakTables.add(q.b)
+    }
+  }
+  const weakArr = [...weakTables].filter((t) => tables.includes(t))
+  const focusArr = preferPlanFocusTables.filter((t) => tables.includes(t))
+  const r = Math.random()
+  let table: number
+  if (weakArr.length > 0 && r < 0.45) {
+    table = weakArr[randomInt(0, weakArr.length - 1)]!
+  } else if (focusArr.length > 0 && r < 0.75) {
+    table = focusArr[randomInt(0, focusArr.length - 1)]!
+  } else {
+    table = tables[randomInt(0, tables.length - 1)]!
+  }
+  return pickQuestionAvoiding(() => pickQuestionForTable(table), avoidKeys)
+}
+
 /**
  * Bias early slots toward a target fact (or table-only focus); then mix with weak + generic.
  * @param totalSlots — expected questions per "session slice" (e.g. 4 for match deck, 12 for balloon run)

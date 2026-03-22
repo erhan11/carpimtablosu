@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Celebration } from '@/components/ui/Celebration'
 import { MainLayout } from '@/layouts/MainLayout'
+import type { RecoveryKind } from '@/lib/flow/flowEngine'
+import { useFlowGameSession } from '@/lib/flow/useFlowGameSession'
 import { getDifficultyTierKey } from '@/lib/difficulty/difficultyTier'
 import {
   correctAnswerFor,
@@ -16,6 +18,8 @@ import {
 import { shuffleInPlace } from '@/lib/math/shuffle'
 import { responseClockMs } from '@/lib/perf'
 import { useProgressStore, useWeakKeys } from '@/lib/progress/store'
+
+const TOTAL = 10
 
 export function BossGame() {
   const { t, i18n } = useTranslation(['games', 'common'])
@@ -35,25 +39,21 @@ export function BossGame() {
   const level = useProgressStore((s) => s.level)
   const markBossCompletedAtLevel = useProgressStore((s) => s.markBossCompletedAtLevel)
 
+  const {
+    pickIntent,
+    syncStreakFromGame,
+    bumpFrustrationAfterAnswer,
+    shouldSuggestBreak,
+    setBreakDismissed,
+  } = useFlowGameSession()
+
+  const [flowRecovery, setFlowRecovery] = useState<RecoveryKind>('none')
   const bossRewardedRef = useRef(false)
 
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
 
-  const questions = useMemo(() => {
-    const qs: GameQuestion[] = []
-    for (let i = 0; i < 10; i += 1) {
-      qs.push(
-        pickGameQuestionForSession(unlocked, weak, {
-          advancedMode,
-          expertMode,
-          difficultyScale,
-        }),
-      )
-    }
-    return qs
-  }, [unlocked, weak, advancedMode, expertMode, difficultyScale])
-
   const [index, setIndex] = useState(0)
+  const [game, setGame] = useState<GameQuestion | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [party, setParty] = useState(false)
@@ -63,7 +63,31 @@ export function BossGame() {
   const gameRef = useRef<GameQuestion | null>(null)
   const answeredThisQuestion = useRef(false)
 
-  const game = questions[index] ?? questions[0]!
+  const loadQuestion = useCallback(
+    (slotIndex: number) => {
+      const { intent } = pickIntent(slotIndex)
+      setFlowRecovery(intent.recoveryKind)
+      const g = pickGameQuestionForSession(unlocked, weak, {
+        advancedMode,
+        expertMode,
+        difficultyScale,
+        flowIntent: intent,
+      })
+      setGame(g)
+    },
+    [pickIntent, unlocked, weak, advancedMode, expertMode, difficultyScale],
+  )
+
+  useEffect(() => {
+    if (done) return
+    queueMicrotask(() => {
+      loadQuestion(index)
+    })
+  }, [index, done, loadQuestion])
+
+  useEffect(() => {
+    if (game) syncStreakFromGame(game)
+  }, [game, syncStreakFromGame])
 
   useEffect(() => {
     gameRef.current = game
@@ -77,6 +101,7 @@ export function BossGame() {
   const [choices, setChoices] = useState<number[]>([])
 
   useEffect(() => {
+    if (!game) return
     answeredThisQuestion.current = false
     questionShownAt.current = responseClockMs()
     const correct = correctAnswerFor(game)
@@ -126,6 +151,7 @@ export function BossGame() {
       if (!g) return
       const ms = Math.round(responseClockMs() - questionShownAt.current)
       recordAnswer({ gameId: 'boss', question: g.base, correct: ok, responseMs: ms })
+      bumpFrustrationAfterAnswer()
       setMsg(ok ? t('common:feedback.doingGreat') : t('common:feedback.tryAgain'))
       if (ok) {
         setStreak((s) => {
@@ -138,7 +164,7 @@ export function BossGame() {
       }
       window.setTimeout(() => {
         setMsg(null)
-        if (index + 1 >= questions.length) {
+        if (index + 1 >= TOTAL) {
           setDone(true)
           finishBoss()
           return
@@ -146,7 +172,7 @@ export function BossGame() {
         setIndex((i) => i + 1)
       }, 550)
     },
-    [applyComboRewards, finishBoss, index, questions.length, recordAnswer, t],
+    [applyComboRewards, bumpFrustrationAfterAnswer, finishBoss, index, recordAnswer, t],
   )
 
   const onTimeExpired = useCallback(() => {
@@ -160,22 +186,23 @@ export function BossGame() {
       correct: false,
       responseMs: expertTimerMs,
     })
+    bumpFrustrationAfterAnswer()
     setStreak(0)
     setMsg(t('common:feedback.tryAgain'))
     window.setTimeout(() => {
       setMsg(null)
-      if (index + 1 >= questions.length) {
+      if (index + 1 >= TOTAL) {
         setDone(true)
         finishBoss()
         return
       }
       setIndex((i) => i + 1)
     }, 550)
-  }, [expertTimerMs, finishBoss, index, questions.length, recordAnswer, t])
+  }, [bumpFrustrationAfterAnswer, expertTimerMs, finishBoss, index, recordAnswer, t])
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- per-question timer reset */
-    if (!expertMode || !expertTimerEnabled || done) {
+    if (!game || !expertMode || !expertTimerEnabled || done) {
       setTimeLeft(0)
       return
     }
@@ -199,11 +226,11 @@ export function BossGame() {
     if (done) return
     if (answeredThisQuestion.current) return
     answeredThisQuestion.current = true
-    const ok = n === correctAnswerFor(game)
+    const ok = n === correctAnswerFor(game!)
     advanceOrComplete(ok)
   }
 
-  const prompt = formatQuestionPrompt(game)
+  const prompt = game ? formatQuestionPrompt(game) : ''
   const comboMult =
     streak >= 10 ? 5 : streak >= 5 ? 3 : streak >= 3 ? 2 : expertMode && streak > 0 ? 1 : 0
 
@@ -212,6 +239,30 @@ export function BossGame() {
       <Celebration show={party} />
 
       <div className="text-sm text-[var(--muted)]">{t('games:boss.subtitle')}</div>
+      {!done && shouldSuggestBreak ? (
+        <Card className="mt-3 border-[var(--primary)]/30 bg-[var(--primary)]/5">
+          <div className="text-center text-lg font-extrabold">{t('games:flow.breakTitle')}</div>
+          <div className="mt-1 text-center text-sm text-[var(--muted)]">{t('games:flow.breakBody')}</div>
+          <div className="mt-3 flex justify-center">
+            <BigButton variant="primary" onClick={() => setBreakDismissed(true)}>
+              {t('games:flow.breakDismiss')}
+            </BigButton>
+          </div>
+        </Card>
+      ) : null}
+      {!done && flowRecovery === 'switch_mode' ? (
+        <div className="mt-2 rounded-lg bg-black/5 px-3 py-2 text-center text-sm text-[var(--muted)]">
+          {t('games:flow.recoverySwitch')}{' '}
+          <Link to="/games/mixed" className="font-extrabold text-[var(--primary-dark)] underline">
+            {t('games:flow.tryMixed')}
+          </Link>
+        </div>
+      ) : null}
+      {!done && flowRecovery === 'short_challenge' ? (
+        <div className="mt-2 rounded-lg bg-black/5 px-3 py-2 text-center text-sm text-[var(--muted)]">
+          {t('games:flow.recoveryShort')}
+        </div>
+      ) : null}
       {expertMode && expertTimerEnabled && !done ? (
         <div className="mt-2 text-sm font-extrabold text-[var(--muted)]">
           {t('games:expert.questionTime', { s: (timeLeft / 1000).toFixed(1) })}
@@ -222,14 +273,14 @@ export function BossGame() {
         <div className="text-center text-sm font-extrabold text-[var(--muted)]">
           {done
             ? t('games:boss.complete')
-            : t('games:boss.progress', { current: index + 1, total: questions.length })}
+            : t('games:boss.progress', { current: index + 1, total: TOTAL })}
         </div>
         {expertMode && comboMult >= 1 && !done ? (
           <div className="mt-2 text-center text-sm font-extrabold text-[var(--primary-dark)]">
             {t('games:expert.combo', { n: comboMult })}
           </div>
         ) : null}
-        {!done ? (
+        {!done && game ? (
           <>
             <div className="mt-4 text-center text-4xl font-extrabold leading-tight">{prompt}</div>
             {msg ? (
@@ -243,9 +294,13 @@ export function BossGame() {
               ))}
             </div>
           </>
-        ) : (
+        ) : null}
+        {!done && !game ? (
+          <div className="mt-4 text-center text-sm text-[var(--muted)]">{t('common:loading')}</div>
+        ) : null}
+        {done ? (
           <div className="mt-4 text-center text-2xl font-extrabold">{t('games:boss.complete')}</div>
-        )}
+        ) : null}
       </Card>
 
       <div className="mt-4">

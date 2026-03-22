@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Celebration } from '@/components/ui/Celebration'
 import { MainLayout } from '@/layouts/MainLayout'
+import type { RecoveryKind } from '@/lib/flow/flowEngine'
+import { useFlowGameSession } from '@/lib/flow/useFlowGameSession'
 import { getDifficultyTierKey } from '@/lib/difficulty/difficultyTier'
 import {
   correctAnswerFor,
@@ -33,6 +35,17 @@ export function SpeedGame() {
   const recordExpertComboPeak = useProgressStore((s) => s.recordExpertComboPeak)
   const speedBestApm = useProgressStore((s) => s.speedBestApm ?? 0)
 
+  const {
+    pickIntent,
+    syncStreakFromGame,
+    bumpFrustrationAfterAnswer,
+    shouldSuggestBreak,
+    setBreakDismissed,
+  } = useFlowGameSession()
+
+  const slotRef = useRef(0)
+  const [flowRecovery, setFlowRecovery] = useState<RecoveryKind>('none')
+
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
 
   const [phase, setPhase] = useState<'ready' | 'play' | 'done'>('ready')
@@ -49,10 +62,15 @@ export function SpeedGame() {
   const [questionKey, setQuestionKey] = useState(0)
 
   const pushQuestion = useCallback(() => {
+    const slot = slotRef.current
+    const { intent } = pickIntent(slot)
+    setFlowRecovery(intent.recoveryKind)
+    slotRef.current += 1
     const g = pickGameQuestionForSession(unlocked, weak, {
       advancedMode,
       expertMode,
       difficultyScale,
+      flowIntent: intent,
     })
     setGame(g)
     questionShownAt.current = responseClockMs()
@@ -60,7 +78,11 @@ export function SpeedGame() {
     const wrong = wrongAnswersForGame(g, 3)
     setChoices(shuffleInPlace([ca, ...wrong]))
     setQuestionKey((k) => k + 1)
-  }, [unlocked, weak, advancedMode, expertMode, difficultyScale])
+  }, [pickIntent, unlocked, weak, advancedMode, expertMode, difficultyScale])
+
+  useEffect(() => {
+    if (game) syncStreakFromGame(game)
+  }, [game, syncStreakFromGame])
 
   useEffect(() => {
     if (phase !== 'play') return
@@ -92,6 +114,7 @@ export function SpeedGame() {
     setRemainMs(ROUND_SEC * 1000)
     setCorrectCount(0)
     setStreak(0)
+    slotRef.current = 0
     endedRef.current = false
     setPhase('play')
     pushQuestion()
@@ -107,6 +130,7 @@ export function SpeedGame() {
       correct: ok,
       responseMs: ms,
     })
+    bumpFrustrationAfterAnswer()
     if (ok) {
       setCorrectCount((c) => c + 1)
       if (expertMode) {
@@ -148,6 +172,30 @@ export function SpeedGame() {
     <MainLayout title={t('games:speed.title')} showBackTo="/games" headerRight={difficultyBadge}>
       <Celebration show={party} />
       <div className="text-sm text-[var(--muted)]">{t('games:speed.subtitle')}</div>
+      {phase === 'play' && shouldSuggestBreak ? (
+        <Card className="mt-3 border-[var(--primary)]/30 bg-[var(--primary)]/5">
+          <div className="text-center text-lg font-extrabold">{t('games:flow.breakTitle')}</div>
+          <div className="mt-1 text-center text-sm text-[var(--muted)]">{t('games:flow.breakBody')}</div>
+          <div className="mt-3 flex justify-center">
+            <BigButton variant="primary" onClick={() => setBreakDismissed(true)}>
+              {t('games:flow.breakDismiss')}
+            </BigButton>
+          </div>
+        </Card>
+      ) : null}
+      {phase === 'play' && flowRecovery === 'switch_mode' ? (
+        <div className="mt-2 rounded-lg bg-black/5 px-3 py-2 text-center text-sm text-[var(--muted)]">
+          {t('games:flow.recoverySwitch')}{' '}
+          <Link to="/games/mixed" className="font-extrabold text-[var(--primary-dark)] underline">
+            {t('games:flow.tryMixed')}
+          </Link>
+        </div>
+      ) : null}
+      {phase === 'play' && flowRecovery === 'short_challenge' ? (
+        <div className="mt-2 rounded-lg bg-black/5 px-3 py-2 text-center text-sm text-[var(--muted)]">
+          {t('games:flow.recoveryShort')}
+        </div>
+      ) : null}
 
       {phase === 'ready' ? (
         <Card className="mt-4">

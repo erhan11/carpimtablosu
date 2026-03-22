@@ -1,4 +1,14 @@
-import { type Question, factKey, parseTableId, pickQuestion, randomInt } from '@/lib/math/questionBank'
+import type { FlowPickIntent } from '@/lib/flow/flowEngine'
+import {
+  type Question,
+  factKey,
+  parseTableId,
+  pickQuestion,
+  pickQuestionAvoiding,
+  pickQuestionForcedWeak,
+  pickSingleTableQuestion,
+  randomInt,
+} from '@/lib/math/questionBank'
 import { TABLE_ORDER, toTableId, type TableId } from '@/types/progress'
 
 export type QuestionVariant = 'standard' | 'reverse_missing_a' | 'reverse_missing_b' | 'twodigit'
@@ -52,8 +62,26 @@ export function pickMixedTableQuestion(unlockedTables: TableId[], weakKeys: stri
 export function pickExpertGameQuestion(
   unlockedTables: TableId[],
   weakKeys: string[],
-  opts: { difficultyScale: number; mixedOnly?: boolean },
+  opts: { difficultyScale: number; mixedOnly?: boolean; flowIntent?: FlowPickIntent },
 ): GameQuestion {
+  const fi = opts.flowIntent
+  const avoidRev = fi?.avoidReverse === true
+  const avoid = new Set(fi?.avoidFactKeys ?? [])
+
+  if (fi?.weakSlot && weakKeys.length > 0) {
+    const base = pickQuestionForcedWeak(unlockedTables, weakKeys, avoid)
+    return { base, variant: 'standard' }
+  }
+  if (fi?.singleTableOnly) {
+    const base = pickSingleTableQuestion(
+      unlockedTables,
+      weakKeys,
+      fi.preferPlanFocusTables ?? [],
+      avoid,
+    )
+    return { base, variant: 'standard' }
+  }
+
   if (opts.mixedOnly) {
     const r = Math.random()
     if (r < 0.7) {
@@ -62,6 +90,7 @@ export function pickExpertGameQuestion(
     }
     if (r < 0.9) {
       const base = pickMixedTableQuestion(unlockedTables, weakKeys)
+      if (avoidRev) return { base, variant: 'standard' }
       return Math.random() < 0.5
         ? { base, variant: 'reverse_missing_a' }
         : { base, variant: 'reverse_missing_b' }
@@ -80,6 +109,7 @@ export function pickExpertGameQuestion(
       Math.random() < 0.5
         ? pickMixedTableQuestion(unlockedTables, weakKeys)
         : pickQuestion(unlockedTables, weakKeys)
+    if (avoidRev) return { base, variant: 'standard' }
     return Math.random() < 0.5
       ? { base, variant: 'reverse_missing_a' }
       : { base, variant: 'reverse_missing_b' }
@@ -97,45 +127,96 @@ export function pickGameQuestionForSession(
     expertMode: boolean
     difficultyScale: number
     mixedOnly?: boolean
+    flowIntent?: FlowPickIntent
   },
 ): GameQuestion {
+  const fi = opts.flowIntent
   if (opts.mixedOnly) {
     if (opts.expertMode) {
       return pickExpertGameQuestion(unlockedTables, weakKeys, {
         difficultyScale: opts.difficultyScale,
         mixedOnly: true,
+        flowIntent: fi,
       })
     }
-    return { base: pickMixedTableQuestion(unlockedTables, weakKeys), variant: 'standard' }
+    const avoid = new Set(fi?.avoidFactKeys ?? [])
+    let base: Question
+    if (fi?.weakSlot && weakKeys.length > 0) {
+      base = pickQuestionForcedWeak(unlockedTables, weakKeys, avoid)
+    } else {
+      base = pickMixedTableQuestion(unlockedTables, weakKeys)
+    }
+    return { base, variant: 'standard' }
   }
   if (opts.expertMode) {
     return pickExpertGameQuestion(unlockedTables, weakKeys, {
       difficultyScale: opts.difficultyScale,
       mixedOnly: false,
+      flowIntent: fi,
     })
   }
   return pickGameQuestion(unlockedTables, weakKeys, {
     advancedMode: opts.advancedMode,
     difficultyScale: opts.difficultyScale,
+    flowIntent: fi,
   })
 }
 
 export function pickGameQuestion(
   unlockedTables: TableId[],
   weakKeys: string[],
-  opts: { advancedMode: boolean; difficultyScale: number },
+  opts: { advancedMode: boolean; difficultyScale: number; flowIntent?: FlowPickIntent },
 ): GameQuestion {
-  const roll = Math.random() * Math.max(0.4, opts.difficultyScale)
-  const base =
-    opts.advancedMode && roll > 0.72
-      ? pickTwoDigitQuestion()
-      : opts.advancedMode && roll > 0.38
-        ? pickMixedTableQuestion(unlockedTables, weakKeys)
-        : pickQuestion(unlockedTables, weakKeys)
+  const fi = opts.flowIntent
+  const avoid = new Set(fi?.avoidFactKeys ?? [])
+
+  let base: Question
+  if (fi?.weakSlot && weakKeys.length > 0) {
+    base = pickQuestionForcedWeak(unlockedTables, weakKeys, avoid)
+  } else if (fi?.singleTableOnly) {
+    base = pickSingleTableQuestion(
+      unlockedTables,
+      weakKeys,
+      fi.preferPlanFocusTables ?? [],
+      avoid,
+    )
+  } else {
+    const roll = Math.random() * Math.max(0.4, opts.difficultyScale)
+    if (opts.advancedMode && fi?.twoDigitOk !== false && roll > 0.72) {
+      base = pickQuestionAvoiding(() => pickTwoDigitQuestion(), avoid)
+    } else if (opts.advancedMode && fi?.mixedTablesOk !== false && roll > 0.38) {
+      base = pickQuestionAvoiding(() => pickMixedTableQuestion(unlockedTables, weakKeys), avoid)
+    } else {
+      base = pickQuestionAvoiding(() => pickQuestion(unlockedTables, weakKeys), avoid)
+    }
+  }
 
   if (!opts.advancedMode) {
     return { base, variant: 'standard' }
   }
+
+  if (fi?.avoidReverse) {
+    if (fi.variantHint === 'twodigit' && base.a >= 11) {
+      return { base, variant: 'twodigit' }
+    }
+    return { base, variant: base.a >= 11 ? 'twodigit' : 'standard' }
+  }
+
+  if (fi?.variantHint === 'standard') {
+    return { base, variant: base.a >= 11 ? 'twodigit' : 'standard' }
+  }
+  if (fi?.variantHint === 'reverse') {
+    return Math.random() < 0.5
+      ? { base, variant: 'reverse_missing_a' }
+      : { base, variant: 'reverse_missing_b' }
+  }
+  if (fi?.variantHint === 'twodigit' && base.a >= 11) {
+    return { base, variant: 'twodigit' }
+  }
+  if (fi?.variantHint === 'mixed') {
+    return { base, variant: 'standard' }
+  }
+
   const vr = Math.random()
   if (vr < 0.22) {
     return Math.random() < 0.5

@@ -13,6 +13,7 @@ import {
   wrongAnswers,
 } from '@/lib/math/questionBank'
 import { shuffleInPlace } from '@/lib/math/shuffle'
+import { responseClockMs } from '@/lib/perf'
 import { useProgressStore, useWeakKeys } from '@/lib/progress/store'
 
 const SESSION_SLOTS = 12
@@ -31,6 +32,7 @@ export function BalloonGame() {
   const recordAnswer = useProgressStore((s) => s.recordAnswer)
 
   const slotRef = useRef(0)
+  const questionShownAt = useRef(0)
   const [q, setQ] = useState(() =>
     factKey || tableFocus !== undefined
       ? pickQuestionAdaptive(unlocked, weak, factKey ?? undefined, 0, SESSION_SLOTS, tableFocus)
@@ -42,6 +44,7 @@ export function BalloonGame() {
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
 
   useEffect(() => {
+    questionShownAt.current = responseClockMs()
     const correct = q.a * q.b
     const wrong = wrongAnswers(correct, 3, 120)
     const next = shuffleInPlace([correct, ...wrong])
@@ -52,7 +55,8 @@ export function BalloonGame() {
 
   function pick(n: number) {
     const ok = n === q.a * q.b
-    recordAnswer({ gameId: 'balloon', question: q, correct: ok })
+    const ms = Math.round(responseClockMs() - questionShownAt.current)
+    recordAnswer({ gameId: 'balloon', question: q, correct: ok, responseMs: ms })
     setMsg(ok ? t('common:feedback.doingGreat') : t('common:feedback.tryAgain'))
     window.setTimeout(() => {
       setMsg(null)

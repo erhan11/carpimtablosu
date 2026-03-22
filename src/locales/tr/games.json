@@ -60,6 +60,14 @@
     "newRecord": "Yeni rekor!",
     "again": "Tekrar oyna"
   },
+  "flow": {
+    "breakTitle": "Harika gidiyorsun!",
+    "breakBody": "Kısa bir ara verelim.",
+    "breakDismiss": "Tamam",
+    "recoverySwitch": "Biraz değişiklik iyi olabilir — karışık meydan okumayı dene.",
+    "recoveryShort": "Kısa bir hız turu tekrar odaklanmana yardımcı olabilir.",
+    "tryMixed": "Karışık meydan okumaya git"
+  },
   "modes": {
     "balloon": "Balon",
     "match": "Eşleştir",

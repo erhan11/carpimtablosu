@@ -60,6 +60,14 @@
     "newRecord": "New record!",
     "again": "Play again"
   },
+  "flow": {
+    "breakTitle": "Great job!",
+    "breakBody": "Let's take a short break.",
+    "breakDismiss": "Got it",
+    "recoverySwitch": "Try something different for a moment — like the mixed challenge.",
+    "recoveryShort": "A short speed round might help you get back in flow.",
+    "tryMixed": "Go to mixed challenge"
+  },
   "modes": {
     "balloon": "Balloon",
     "match": "Match",
