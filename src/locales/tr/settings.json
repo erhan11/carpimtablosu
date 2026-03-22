@@ -1,5 +1,9 @@
 {
   "title": "Ayarlar",
+  "advanced": "İleri mod",
+  "advancedHint": "Daha zor sorular, karışık tablolar ve hızlı açılışlar. İstersen kapatıp kolaylaştır.",
+  "advancedOn": "İleri: açık",
+  "advancedOff": "İleri: kapalı",
   "language": "Dil",
   "sound": "Ses",
   "soundOn": "Açık",

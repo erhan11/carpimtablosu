@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
-import { formatDayForLocale, getLocalDay } from '@/lib/date/localDay'
+import { getLocalDay } from '@/lib/date/localDay'
 import { formatFactDisplay } from '@/lib/adaptive/adaptive'
 import { getEffectiveProgramStart, getPlanWeekRow } from '@/lib/plan/programWeek'
 import { useProgressStore } from '@/lib/progress/store'
@@ -57,6 +57,14 @@ export function ParentPanel() {
     () => new Intl.DateTimeFormat(locale, { weekday: 'long' }),
     [locale],
   )
+  const chartWeekdayFmt = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: 'short' }),
+    [locale],
+  )
+  const chartDayFmt = useMemo(
+    () => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }),
+    [locale],
+  )
 
   return (
     <MainLayout title={t('parent:title')} showBackTo="/">
@@ -76,7 +84,7 @@ export function ParentPanel() {
 
         <Card>
           <div className="text-sm font-extrabold text-[var(--muted)]">{t('parent:last7Days')}</div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 grid grid-cols-7 gap-1">
             {last7.map((d) => {
               const c = d.count
               const h =
@@ -88,21 +96,27 @@ export function ParentPanel() {
               const weekday = Number.isNaN(dayDate.getTime())
                 ? d.date
                 : weekdayLongFmt.format(dayDate)
+              const labelOk = !Number.isNaN(dayDate.getTime())
               return (
-                <div key={d.date} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                <div key={d.date} className="flex min-w-0 flex-col items-center gap-1">
                   <div
                     className="flex w-full items-end justify-center"
                     style={{ height: BAR_MAX_PX }}
                   >
                     <div
-                      className="w-full rounded-lg bg-[var(--primary)]"
+                      className="w-full max-w-[28px] rounded-lg bg-[var(--primary)]"
                       style={{ height: `${h}px` }}
                       role="img"
                       aria-label={t('parent:activity', { weekday, count: c })}
                     />
                   </div>
-                  <div className="truncate text-center text-[10px] font-bold text-[var(--muted)]">
-                    {formatDayForLocale(d.date, locale)}
+                  <div className="flex w-full flex-col items-center gap-0 text-center tabular-nums">
+                    <span className="w-full text-[9px] font-extrabold leading-tight text-[var(--ink)]">
+                      {labelOk ? chartWeekdayFmt.format(dayDate) : '—'}
+                    </span>
+                    <span className="w-full text-[8px] font-bold leading-tight text-[var(--muted)]">
+                      {labelOk ? chartDayFmt.format(dayDate) : d.date.slice(5)}
+                    </span>
                   </div>
                 </div>
               )

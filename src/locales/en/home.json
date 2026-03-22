@@ -50,7 +50,22 @@
     "coins50": "50 coins",
     "tables4": "4 tables unlocked",
     "facts30": "30 facts",
+    "advanced": "Advanced path",
+    "speedDemon": "Speed demon (12+ / min)",
+    "crownTables": "Table master",
     "locked": "Locked"
+  },
+  "advanced": {
+    "badge": "Advanced",
+    "offerTitle": "Try Advanced Mode?",
+    "offerBody": "You’re doing great! Unlock more tables faster and get harder questions. You can turn this off anytime in settings later.",
+    "yes": "Yes, unlock",
+    "notNow": "Not now",
+    "challenge": "Speed challenge",
+    "challengeHint": "60 seconds — beat your best",
+    "skipTitle": "Skip ahead?",
+    "skipBody": "Unlock the next table right away.",
+    "skipConfirm": "Unlock next table"
   },
   "review": {
     "title": "Review time",

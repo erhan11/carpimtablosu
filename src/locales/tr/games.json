@@ -37,11 +37,25 @@
     "progress": "Soru {{current}} / {{total}}",
     "complete": "Bölüm bitti!"
   },
+  "speed": {
+    "title": "Hız yarışı",
+    "subtitle": "Bir dakikada olabildiğince çok doğru cevap",
+    "rules": "60 saniye — doğru cevaba hızlıca dokun!",
+    "start": "Başla",
+    "time": "Süre",
+    "score": "Doğru",
+    "complete": "Süre doldu!",
+    "apm": "{{n}} doğru",
+    "best": "Rekor: {{n}} / dk",
+    "newRecord": "Yeni rekor!",
+    "again": "Tekrar oyna"
+  },
   "modes": {
     "balloon": "Balon",
     "match": "Eşleştir",
     "memory": "Hafıza",
     "sprint": "Mini yarış",
+    "speed": "Hız",
     "boss": "Boss"
   }
 }

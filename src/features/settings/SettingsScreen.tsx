@@ -12,6 +12,8 @@ export function SettingsScreen() {
   const soundEnabled = useProgressStore((s) => s.soundEnabled !== false)
   const setSoundEnabled = useProgressStore((s) => s.setSoundEnabled)
   const reset = useProgressStore((s) => s.resetProgress)
+  const advancedMode = useProgressStore((s) => s.advancedMode)
+  const setAdvancedMode = useProgressStore((s) => s.setAdvancedMode)
 
   return (
     <MainLayout title={t('title')}>
@@ -25,6 +27,20 @@ export function SettingsScreen() {
               aria-pressed={soundEnabled}
             >
               {soundEnabled ? t('soundOn') : t('soundOff')}
+            </BigButton>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="text-sm font-bold text-[var(--muted)]">{t('advanced')}</div>
+          <p className="mt-2 text-sm text-[var(--muted)]">{t('advancedHint')}</p>
+          <div className="mt-3">
+            <BigButton
+              variant={advancedMode ? 'primary' : 'ghost'}
+              onClick={() => setAdvancedMode(!advancedMode)}
+              aria-pressed={advancedMode}
+            >
+              {advancedMode ? t('advancedOn') : t('advancedOff')}
             </BigButton>
           </div>
         </Card>

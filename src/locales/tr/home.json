@@ -50,7 +50,22 @@
     "coins50": "50 madeni para",
     "tables4": "4 tablo açıldı",
     "facts30": "30 çarpım",
+    "advanced": "İleri yol",
+    "speedDemon": "Hız canavarı (12+ / dk)",
+    "crownTables": "Tablo ustası",
     "locked": "Kilitli"
+  },
+  "advanced": {
+    "badge": "İleri",
+    "offerTitle": "İleri modu dene?",
+    "offerBody": "Harika gidiyorsun! Daha çok tabloyu hızlı aç ve zor sorular gör. İstediğin zaman normal akışa dönebilirsin.",
+    "yes": "Evet, aç",
+    "notNow": "Şimdi değil",
+    "challenge": "Hız yarışı",
+    "challengeHint": "60 saniye — rekorunu kır",
+    "skipTitle": "Atlamak ister misin?",
+    "skipBody": "Bir sonraki tabloyu hemen aç.",
+    "skipConfirm": "Sonraki tabloyu aç"
   },
   "review": {
     "title": "Tekrar zamanı",

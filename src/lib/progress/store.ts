@@ -14,6 +14,7 @@ import { AVATARS } from '@/content/cosmetics/avatars'
 import { THEMES } from '@/content/cosmetics/themes'
 import { handleLevelRewards } from '@/lib/cosmetics/levelRewards'
 import { normalizeCosmetics } from '@/lib/cosmetics/normalize'
+import { fastTrackTableIds } from '@/lib/math/advancedQuestions'
 import {
   PROGRESS_VERSION,
   type AdaptiveState,
@@ -142,6 +143,15 @@ export interface ProgressState {
   /** Local YYYY-MM-DD when the 3-month guided program started; set on first daily ensure if missing. */
   programStartDate?: string
   adaptive: AdaptiveState
+  advancedMode: boolean
+  advancedOfferDismissedDay?: string
+  levelSkipOfferDismissedDay?: string
+  tableMastery: Record<string, number>
+  tableStats: Record<string, { c: number; w: number }>
+  performanceBuffer: { correct: boolean; ms: number }[]
+  difficultyScale: number
+  speedBestApm: number
+  lastBossLevelCompleted?: number
   setLocale: (locale: LocaleCode) => void
   setSoundEnabled: (value: boolean) => void
   completeLanguageSelect: (locale: LocaleCode) => void
@@ -151,9 +161,17 @@ export interface ProgressState {
     question: Question
     correct: boolean
     minutes?: number
+    responseMs?: number
   }) => void
   addBossBonusStars: (amount: number) => void
   unlockNextTable: () => void
+  setAdvancedMode: (value: boolean) => void
+  dismissAdvancedOffer: () => void
+  dismissLevelSkipOffer: () => void
+  unlockFastTrack: () => void
+  applyLevelSkip: () => void
+  recordSpeedBest: (apm: number) => void
+  markBossCompletedAtLevel: (level: number) => void
   maybeAwardBadges: () => void
   resetProgress: () => void
   getLast7Days: () => { date: string; minutes: number; correct: number; wrong: number }[]
@@ -196,6 +214,15 @@ const dataDefaults = () => ({
     recentRecommendedGameByFact: {} as Record<string, string>,
     lastAdaptiveGameAt: undefined,
   },
+  advancedMode: false,
+  advancedOfferDismissedDay: undefined,
+  levelSkipOfferDismissedDay: undefined,
+  tableMastery: {} as Record<string, number>,
+  tableStats: {} as Record<string, { c: number; w: number }>,
+  performanceBuffer: [] as { correct: boolean; ms: number }[],
+  difficultyScale: 1,
+  speedBestApm: 0,
+  lastBossLevelCompleted: undefined,
 })
 
 export const useProgressStore = create<ProgressState>()(
@@ -235,7 +262,7 @@ export const useProgressStore = create<ProgressState>()(
         })
       },
 
-      recordAnswer: ({ gameId, question, correct, minutes = 0 }) => {
+      recordAnswer: ({ gameId, question, correct, minutes = 0, responseMs }) => {
         const prev = get()
         const key = factKey(question)
         const today = getLocalDay()
@@ -259,6 +286,36 @@ export const useProgressStore = create<ProgressState>()(
           let xp = state.xp
           let level = state.level
           let cosmetics = normalizeCosmetics(state.cosmetics)
+          let difficultyScale = state.difficultyScale ?? 1
+          const perfBuf = [...(state.performanceBuffer ?? [])]
+          if (responseMs !== undefined && responseMs >= 0 && responseMs < 120_000) {
+            perfBuf.push({ correct, ms: responseMs })
+            while (perfBuf.length > 50) perfBuf.shift()
+          }
+          if (correct && responseMs !== undefined && responseMs < 2500) {
+            difficultyScale = Math.min(1.28, difficultyScale + 0.02)
+          } else if (!correct) {
+            difficultyScale = Math.max(0.72, difficultyScale - 0.05)
+          }
+          let tableMastery = { ...state.tableMastery }
+          let tableStats = { ...state.tableStats }
+          const touchTable = (n: number) => {
+            if (n < 1 || n > 10) return
+            const sk = String(n)
+            const prevS = tableStats[sk] ?? { c: 0, w: 0 }
+            const nextS = {
+              c: prevS.c + (correct ? 1 : 0),
+              w: prevS.w + (correct ? 0 : 1),
+            }
+            tableStats = { ...tableStats, [sk]: nextS }
+            const tot = nextS.c + nextS.w
+            const curM = tableMastery[sk] ?? 0
+            if (tot >= 20 && nextS.c / tot >= 0.85 && curM < 3) {
+              tableMastery = { ...tableMastery, [sk]: curM + 1 }
+            }
+          }
+          touchTable(question.a)
+          touchTable(question.b)
           if (correct) {
             coins += 1
             xp += 5
@@ -331,6 +388,10 @@ export const useProgressStore = create<ProgressState>()(
             last7DaysRaw,
             practiceByDay,
             daily,
+            performanceBuffer: perfBuf,
+            difficultyScale,
+            tableMastery,
+            tableStats,
           }
         })
         get().maybeAwardBadges()
@@ -430,6 +491,43 @@ export const useProgressStore = create<ProgressState>()(
         })
       },
 
+      setAdvancedMode: (value) => {
+        set({ advancedMode: value })
+      },
+
+      dismissAdvancedOffer: () => {
+        set({ advancedOfferDismissedDay: getLocalDay() })
+      },
+
+      dismissLevelSkipOffer: () => {
+        set({ levelSkipOfferDismissedDay: getLocalDay() })
+      },
+
+      unlockFastTrack: () => {
+        set((state) => ({
+          ...state,
+          advancedMode: true,
+          unlockedTableIds: fastTrackTableIds(state.unlockedTableIds),
+        }))
+        get().maybeAwardBadges()
+      },
+
+      applyLevelSkip: () => {
+        get().unlockNextTable()
+      },
+
+      recordSpeedBest: (apm) => {
+        set((state) => ({
+          ...state,
+          speedBestApm: Math.max(state.speedBestApm ?? 0, apm),
+        }))
+        get().maybeAwardBadges()
+      },
+
+      markBossCompletedAtLevel: (level) => {
+        set({ lastBossLevelCompleted: level })
+      },
+
       maybeAwardBadges: () => {
         set((state) => {
           const earned = new Set(state.earnedBadges)
@@ -438,6 +536,12 @@ export const useProgressStore = create<ProgressState>()(
           if (state.coins >= 50) earned.add('coins50')
           if (state.unlockedTableIds.length >= 4) earned.add('tables4')
           if (state.masteredFacts.length >= 30) earned.add('facts30')
+          if (state.advancedMode) earned.add('advanced')
+          if ((state.speedBestApm ?? 0) >= 12) earned.add('speedDemon')
+          const masteryVals = Object.values(state.tableMastery ?? {})
+          if (masteryVals.length >= 5 && masteryVals.filter((m) => m >= 3).length >= 3) {
+            earned.add('crownTables')
+          }
           return { ...state, earnedBadges: [...earned] }
         })
       },
@@ -445,7 +549,12 @@ export const useProgressStore = create<ProgressState>()(
       resetProgress: () => {
         const loc = get().locale
         const sound = get().soundEnabled
-        set({ ...dataDefaults(), hasCompletedLanguageSelect: true, locale: loc, soundEnabled: sound })
+        set({
+          ...dataDefaults(),
+          hasCompletedLanguageSelect: true,
+          locale: loc,
+          soundEnabled: sound,
+        })
       },
 
       getLast7Days: () => rollLast7Days(get().last7DaysRaw),
@@ -496,6 +605,42 @@ export const useProgressStore = create<ProgressState>()(
                 }
               })
           : c.practiceByDay
+        merged.advancedMode = typeof p.advancedMode === 'boolean' ? p.advancedMode : c.advancedMode
+        merged.advancedOfferDismissedDay =
+          typeof p.advancedOfferDismissedDay === 'string'
+            ? p.advancedOfferDismissedDay
+            : c.advancedOfferDismissedDay
+        merged.levelSkipOfferDismissedDay =
+          typeof p.levelSkipOfferDismissedDay === 'string'
+            ? p.levelSkipOfferDismissedDay
+            : c.levelSkipOfferDismissedDay
+        merged.tableMastery =
+          p.tableMastery && typeof p.tableMastery === 'object'
+            ? { ...c.tableMastery, ...p.tableMastery }
+            : c.tableMastery
+        merged.tableStats =
+          p.tableStats && typeof p.tableStats === 'object'
+            ? { ...c.tableStats, ...p.tableStats }
+            : c.tableStats
+        merged.performanceBuffer = Array.isArray(p.performanceBuffer)
+          ? p.performanceBuffer.filter(
+              (x) =>
+                x &&
+                typeof x === 'object' &&
+                typeof (x as { correct?: unknown }).correct === 'boolean' &&
+                typeof (x as { ms?: unknown }).ms === 'number',
+            )
+          : c.performanceBuffer
+        merged.difficultyScale =
+          typeof p.difficultyScale === 'number' && Number.isFinite(p.difficultyScale)
+            ? Math.min(1.35, Math.max(0.65, p.difficultyScale))
+            : c.difficultyScale
+        merged.speedBestApm =
+          typeof p.speedBestApm === 'number' && Number.isFinite(p.speedBestApm)
+            ? Math.max(0, p.speedBestApm)
+            : c.speedBestApm
+        merged.lastBossLevelCompleted =
+          typeof p.lastBossLevelCompleted === 'number' ? p.lastBossLevelCompleted : c.lastBossLevelCompleted
         merged.adaptive = {
           recentRecommendedGameByFact: {
             ...c.adaptive.recentRecommendedGameByFact,
@@ -526,6 +671,15 @@ export const useProgressStore = create<ProgressState>()(
         soundEnabled: s.soundEnabled,
         programStartDate: s.programStartDate,
         adaptive: s.adaptive,
+        advancedMode: s.advancedMode,
+        advancedOfferDismissedDay: s.advancedOfferDismissedDay,
+        levelSkipOfferDismissedDay: s.levelSkipOfferDismissedDay,
+        tableMastery: s.tableMastery,
+        tableStats: s.tableStats,
+        performanceBuffer: s.performanceBuffer,
+        difficultyScale: s.difficultyScale,
+        speedBestApm: s.speedBestApm,
+        lastBossLevelCompleted: s.lastBossLevelCompleted,
       }),
     },
   ),

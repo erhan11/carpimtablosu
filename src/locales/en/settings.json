@@ -1,5 +1,9 @@
 {
   "title": "Settings",
+  "advanced": "Advanced mode",
+  "advancedHint": "Harder questions, mixed tables, and faster unlocks. Turn off anytime to ease difficulty.",
+  "advancedOn": "Advanced: on",
+  "advancedOff": "Advanced: off",
   "language": "Language",
   "sound": "Sound",
   "soundOn": "On",

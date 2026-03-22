@@ -37,11 +37,25 @@
     "progress": "Question {{current}} / {{total}}",
     "complete": "Level complete!"
   },
+  "speed": {
+    "title": "Speed challenge",
+    "subtitle": "Answer as many as you can in one minute",
+    "rules": "60 seconds on the clock — tap the right answer fast!",
+    "start": "Start",
+    "time": "Time",
+    "score": "Correct",
+    "complete": "Time’s up!",
+    "apm": "{{n}} correct",
+    "best": "Best: {{n}} / min",
+    "newRecord": "New record!",
+    "again": "Play again"
+  },
   "modes": {
     "balloon": "Balloon",
     "match": "Match",
     "memory": "Memory",
     "sprint": "Sprint",
+    "speed": "Speed",
     "boss": "Boss"
   }
 }

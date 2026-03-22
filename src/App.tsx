@@ -6,6 +6,7 @@ import { BossGame } from '@/features/games/BossGame'
 import { GamesHub } from '@/features/games/GamesHub'
 import { MatchGame } from '@/features/games/MatchGame'
 import { MemoryGame } from '@/features/games/MemoryGame'
+import { SpeedGame } from '@/features/games/SpeedGame'
 import { SprintGame } from '@/features/games/SprintGame'
 import { HomeScreen } from '@/features/home/HomeScreen'
 import { ProfileScreen } from '@/features/profile/ProfileScreen'
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/games/match" element={<MatchGame />} />
         <Route path="/games/memory" element={<MemoryGame />} />
         <Route path="/games/sprint" element={<SprintGame />} />
+        <Route path="/games/speed" element={<SpeedGame />} />
         <Route path="/games/boss" element={<BossGame />} />
         <Route path="/review" element={<ReviewScreen />} />
         <Route path="/parent" element={<ParentPanel />} />

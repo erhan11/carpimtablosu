@@ -20,7 +20,9 @@ import {
   nextAdaptiveMode,
   pickWeakFactForAdaptive,
 } from '@/lib/adaptive/adaptive'
+import { AdvancedModeModal } from '@/features/advanced/AdvancedModeModal'
 import { formatNumber } from '@/lib/format'
+import { shouldOfferAdvancedMode, shouldOfferLevelSkip } from '@/lib/progress/advancedEligibility'
 import { useProgressStore } from '@/lib/progress/store'
 
 function StatPill({ emoji, label }: { emoji: string; label: string }) {
@@ -46,6 +48,14 @@ export function HomeScreen() {
   const unlockedIds = useProgressStore((s) => s.unlockedTableIds)
   const weakFacts = useProgressStore((s) => s.weakFacts)
   const adaptiveState = useProgressStore((s) => s.adaptive)
+  const advancedMode = useProgressStore((s) => s.advancedMode)
+  const performanceBuffer = useProgressStore((s) => s.performanceBuffer ?? [])
+  const advancedOfferDismissedDay = useProgressStore((s) => s.advancedOfferDismissedDay)
+  const levelSkipOfferDismissedDay = useProgressStore((s) => s.levelSkipOfferDismissedDay)
+  const unlockFastTrack = useProgressStore((s) => s.unlockFastTrack)
+  const dismissAdvancedOffer = useProgressStore((s) => s.dismissAdvancedOffer)
+  const dismissLevelSkipOffer = useProgressStore((s) => s.dismissLevelSkipOffer)
+  const applyLevelSkip = useProgressStore((s) => s.applyLevelSkip)
 
   const today = getLocalDay()
   const yesterday = yesterdayFrom(today)
@@ -96,6 +106,22 @@ export function HomeScreen() {
     }
   }, [weakFacts, unlockedIds, adaptiveState.recentRecommendedGameByFact])
 
+  const offerAdvanced = useMemo(
+    () =>
+      shouldOfferAdvancedMode({
+        advancedMode,
+        advancedOfferDismissedDay,
+        streak,
+        performanceBuffer,
+      }),
+    [advancedMode, advancedOfferDismissedDay, streak, performanceBuffer],
+  )
+
+  const offerSkip = useMemo(
+    () => shouldOfferLevelSkip({ levelSkipOfferDismissedDay, performanceBuffer }),
+    [levelSkipOfferDismissedDay, performanceBuffer],
+  )
+
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col gap-4 px-4 pb-10 pt-[max(16px,env(safe-area-inset-top))]">
       <header className="flex items-start justify-between gap-3">
@@ -144,7 +170,35 @@ export function HomeScreen() {
         <div className="mt-0.5 text-[var(--muted)]">{t('home:weeklyPlan.thisWeekFocus', { tables: focusListText })}</div>
       </div>
 
+      {offerAdvanced ? (
+        <AdvancedModeModal
+          kind="advanced"
+          onConfirm={() => {
+            unlockFastTrack()
+            dismissAdvancedOffer()
+          }}
+          onDismiss={() => {
+            dismissAdvancedOffer()
+          }}
+        />
+      ) : null}
+      {!offerAdvanced && offerSkip ? (
+        <AdvancedModeModal
+          kind="skip"
+          onConfirm={() => {
+            applyLevelSkip()
+            dismissLevelSkipOffer()
+          }}
+          onDismiss={() => {
+            dismissLevelSkipOffer()
+          }}
+        />
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
+        {advancedMode ? (
+          <StatPill emoji="⚡" label={t('home:advanced.badge')} />
+        ) : null}
         <StatPill emoji="🔥" label={t('home:stats.streak', { n: streak?.current ?? 0 })} />
         <StatPill
           emoji="🪙"
@@ -252,6 +306,18 @@ export function HomeScreen() {
                 <div className="text-sm text-[var(--muted)]">{t('home:cards.badgesHint')}</div>
               </div>
               <div className="text-4xl">🏅</div>
+            </div>
+          </Card>
+        </Link>
+
+        <Link to="/games/speed">
+          <Card className="active:scale-[0.99] border-2 border-[var(--accent)]/35">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-lg font-extrabold">{t('home:advanced.challenge')}</div>
+                <div className="text-sm text-[var(--muted)]">{t('home:advanced.challengeHint')}</div>
+              </div>
+              <div className="text-4xl">🏃</div>
             </div>
           </Card>
         </Link>

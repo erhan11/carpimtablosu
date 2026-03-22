@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
@@ -13,39 +13,10 @@ export function ProfileScreen() {
   const { t, i18n } = useTranslation(['profile', 'common'])
   const coins = useProgressStore((s) => s.coins)
   const level = useProgressStore((s) => s.level)
-  const cosmetics = useProgressStore((s) => normalizeCosmetics(s.cosmetics))
+  const cosmeticsRaw = useProgressStore((s) => s.cosmetics)
+  const cosmetics = useMemo(() => normalizeCosmetics(cosmeticsRaw), [cosmeticsRaw])
   const selectAvatar = useProgressStore((s) => s.selectAvatar)
   const setThemeId = useProgressStore((s) => s.setThemeId)
-
-  useEffect(() => {
-    const root = document.getElementById('root')
-    const main = document.querySelector('main')
-    const csBody = getComputedStyle(document.body)
-    const csRoot = root ? getComputedStyle(root) : null
-    const csMain = main ? getComputedStyle(main) : null
-    // #region agent log
-    fetch('http://127.0.0.1:7270/ingest/eb6efa66-208f-401b-a382-118f7c3aaa35', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'c43491' },
-      body: JSON.stringify({
-        sessionId: 'c43491',
-        runId: 'paint-check',
-        hypothesisId: 'H-paint-visibility',
-        location: 'ProfileScreen.tsx:useEffect',
-        message: 'computed styles on profile',
-        data: {
-          bodyColor: csBody.color,
-          bodyOpacity: csBody.opacity,
-          rootOpacity: csRoot?.opacity ?? null,
-          mainOpacity: csMain?.opacity ?? null,
-          mainVisibility: csMain?.visibility ?? null,
-          mainColor: csMain?.color ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion
-  }, [])
 
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
   const unlocked = new Set(cosmetics.unlockedAvatarIds)
