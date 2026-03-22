@@ -133,9 +133,10 @@ export function LearnSession() {
     const q = practiceFacts[practiceIndex]
     if (!q) return
     const ok = value === q.a * q.b
-    const beforeM = getMasteryLevel(useProgressStore.getState().tableMastery, table)
+    const tm = useProgressStore.getState().tableMastery ?? {}
+    const beforeM = getMasteryLevel(tm, table)
     recordAnswer({ gameId: 'learn', question: q, correct: ok })
-    const afterM = getMasteryLevel(useProgressStore.getState().tableMastery, table)
+    const afterM = getMasteryLevel(useProgressStore.getState().tableMastery ?? {}, table)
     if (afterM > beforeM) {
       const label = t('learn:tableLabel', { n: table })
       setMasteryToast(t('learn:masteryLevelUp', { label }))
