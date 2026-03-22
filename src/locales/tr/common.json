@@ -32,6 +32,10 @@
     "level": "Seviye {{n}}"
   },
   "accessibility": {
-    "tapToChoose": "Seçmek için dokun"
+    "tapToChoose": "Seçmek için dokun",
+    "openParent": "Ebeveyn özeti",
+    "openProfile": "Profili aç",
+    "openSettings": "Ayarları aç",
+    "goBack": "Geri git"
   }
 }

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
@@ -15,6 +16,36 @@ export function ProfileScreen() {
   const cosmetics = useProgressStore((s) => normalizeCosmetics(s.cosmetics))
   const selectAvatar = useProgressStore((s) => s.selectAvatar)
   const setThemeId = useProgressStore((s) => s.setThemeId)
+
+  useEffect(() => {
+    const root = document.getElementById('root')
+    const main = document.querySelector('main')
+    const csBody = getComputedStyle(document.body)
+    const csRoot = root ? getComputedStyle(root) : null
+    const csMain = main ? getComputedStyle(main) : null
+    // #region agent log
+    fetch('http://127.0.0.1:7270/ingest/eb6efa66-208f-401b-a382-118f7c3aaa35', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'c43491' },
+      body: JSON.stringify({
+        sessionId: 'c43491',
+        runId: 'paint-check',
+        hypothesisId: 'H-paint-visibility',
+        location: 'ProfileScreen.tsx:useEffect',
+        message: 'computed styles on profile',
+        data: {
+          bodyColor: csBody.color,
+          bodyOpacity: csBody.opacity,
+          rootOpacity: csRoot?.opacity ?? null,
+          mainOpacity: csMain?.opacity ?? null,
+          mainVisibility: csMain?.visibility ?? null,
+          mainColor: csMain?.color ?? null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
+  }, [])
 
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
   const unlocked = new Set(cosmetics.unlockedAvatarIds)
@@ -41,6 +72,7 @@ export function ProfileScreen() {
                 type="button"
                 disabled={disabled}
                 onClick={() => selectAvatar(a.id)}
+                aria-label={`${t('profile:avatar.title')}: ${a.id}`}
                 className={`flex min-h-[88px] flex-col items-center justify-center gap-1 rounded-2xl border-2 px-2 py-3 text-3xl shadow transition active:scale-[0.98] ${
                   isSel
                     ? 'border-[var(--primary)] bg-[var(--primary)]/15'
@@ -78,6 +110,7 @@ export function ProfileScreen() {
                 type="button"
                 disabled={locked}
                 onClick={() => setThemeId(th.id)}
+                aria-label={`${t('profile:theme.title')}: ${th.id}`}
                 className={`flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-2xl border-2 px-2 py-3 font-extrabold capitalize shadow transition active:scale-[0.98] ${
                   isSel
                     ? 'border-[var(--primary)] bg-white'

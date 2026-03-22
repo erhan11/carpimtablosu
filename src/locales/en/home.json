@@ -6,19 +6,14 @@
   "tagline": "Let’s take a small step today.",
   "cards": {
     "todayGame": "Today’s game",
-    "todayGameHint": "Ready games",
     "learn": "Learn",
     "learnHint": "Visual story",
     "learned": "Facts I know",
     "learnedHint": "{{count}} facts",
     "badges": "My badges",
     "badgesHint": "Rewards",
-    "parent": "Grown-ups",
-    "parentHint": "Progress",
     "review": "Review time",
-    "reviewHint": "Tricky ones",
-    "daily": "Daily quest",
-    "dailyHint": "Today’s tiny goal"
+    "reviewHint": "Tricky ones"
   },
   "stats": {
     "streak": "Streak: {{n}} days",

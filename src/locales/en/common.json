@@ -32,6 +32,10 @@
     "level": "Level {{n}}"
   },
   "accessibility": {
-    "tapToChoose": "Tap to choose"
+    "tapToChoose": "Tap to choose",
+    "openParent": "Open parent insights",
+    "openProfile": "Open profile",
+    "openSettings": "Open settings",
+    "goBack": "Go back"
   }
 }

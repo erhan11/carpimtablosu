@@ -25,6 +25,21 @@ import {
 
 const STORAGE_KEY = 'carpim-progress-v1'
 
+function sanitizePersistedStreak(
+  raw: unknown,
+  fallback: { current: number; lastActiveDate: string },
+): { current: number; lastActiveDate: string } {
+  if (!raw || typeof raw !== 'object') return fallback
+  const r = raw as { current?: unknown; lastActiveDate?: unknown }
+  const current =
+    typeof r.current === 'number' && Number.isFinite(r.current)
+      ? Math.max(0, Math.floor(r.current))
+      : fallback.current
+  const lastActiveDate =
+    typeof r.lastActiveDate === 'string' ? r.lastActiveDate : fallback.lastActiveDate
+  return { current, lastActiveDate }
+}
+
 function bumpDayStats(
   days: { date: string; minutes: number; correct: number; wrong: number }[],
   today: string,
@@ -446,6 +461,41 @@ export const useProgressStore = create<ProgressState>()(
           ...c.cosmetics,
           ...(p.cosmetics as Partial<CosmeticsState> & { unlockedStickers?: string[] }),
         })
+        merged.streak = sanitizePersistedStreak(p.streak, c.streak)
+        merged.weakFacts = Array.isArray(p.weakFacts)
+          ? p.weakFacts
+              .filter(
+                (w) =>
+                  w &&
+                  typeof w === 'object' &&
+                  typeof (w as { key?: unknown }).key === 'string',
+              )
+              .map((w) => {
+                const wk = w as { key: string; mistakes?: unknown }
+                const mistakes =
+                  typeof wk.mistakes === 'number' && Number.isFinite(wk.mistakes)
+                    ? Math.max(0, Math.floor(wk.mistakes))
+                    : 0
+                return { key: wk.key, mistakes }
+              })
+          : c.weakFacts
+        merged.practiceByDay = Array.isArray(p.practiceByDay)
+          ? p.practiceByDay
+              .filter(
+                (e) =>
+                  e &&
+                  typeof e === 'object' &&
+                  typeof (e as { date?: unknown }).date === 'string',
+              )
+              .map((e) => {
+                const en = e as DayPracticeEntry
+                return {
+                  date: en.date,
+                  factKeys: Array.isArray(en.factKeys) ? en.factKeys : [],
+                  tables: Array.isArray(en.tables) ? en.tables : [],
+                }
+              })
+          : c.practiceByDay
         merged.adaptive = {
           recentRecommendedGameByFact: {
             ...c.adaptive.recentRecommendedGameByFact,

@@ -6,19 +6,14 @@
   "tagline": "Bugün küçük bir adım atalım.",
   "cards": {
     "todayGame": "Bugünkü oyun",
-    "todayGameHint": "Hazır oyunlar",
     "learn": "Öğren",
     "learnHint": "Görsel anlatım",
     "learned": "Öğrendiğim çarpımlar",
     "learnedHint": "{{count}} çarpım",
     "badges": "Rozetlerim",
     "badgesHint": "Ödüller",
-    "parent": "Ebeveyn alanı",
-    "parentHint": "İlerleme",
     "review": "Tekrar zamanı",
-    "reviewHint": "Zorlandıkların",
-    "daily": "Günlük görev",
-    "dailyHint": "Bugünün mini hedefi"
+    "reviewHint": "Zorlandıkların"
   },
   "stats": {
     "streak": "Seri: {{n}} gün",

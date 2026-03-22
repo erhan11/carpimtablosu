@@ -33,7 +33,7 @@ function StatPill({ emoji, label }: { emoji: string; label: string }) {
 }
 
 export function HomeScreen() {
-  const { t, i18n } = useTranslation(['home', 'common', 'learn', 'games'])
+  const { t, i18n } = useTranslation(['home', 'common', 'learn', 'games', 'parent'])
   const coins = useProgressStore((s) => s.coins)
   const stars = useProgressStore((s) => s.stars)
   const streak = useProgressStore((s) => s.streak)
@@ -105,17 +105,31 @@ export function HomeScreen() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Link
+            to="/parent"
+            className="inline-flex min-h-[44px] min-w-[56px] flex-col items-center justify-center rounded-2xl bg-white/80 px-2 py-1 text-center text-[10px] font-extrabold leading-tight shadow"
+            aria-label={t('common:accessibility.openParent')}
+          >
+            <span className="text-lg leading-none" aria-hidden>
+              📊
+            </span>
+            {t('parent:nav')}
+          </Link>
+          <Link
             to="/profile"
             className="inline-flex min-h-[44px] min-w-[56px] flex-col items-center justify-center rounded-2xl bg-white/80 px-2 py-1 text-center text-[10px] font-extrabold leading-tight shadow"
+            aria-label={t('common:accessibility.openProfile')}
           >
-            <span className="text-lg leading-none">👤</span>
+            <span className="text-lg leading-none" aria-hidden>
+              👤
+            </span>
             {t('home:nav.profile')}
           </Link>
           <Link
             to="/settings"
             className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-white/80 px-3 font-extrabold shadow"
+            aria-label={t('common:accessibility.openSettings')}
           >
-            ⚙️
+            <span aria-hidden>⚙️</span>
           </Link>
         </div>
       </header>
@@ -131,7 +145,7 @@ export function HomeScreen() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <StatPill emoji="🔥" label={t('home:stats.streak', { n: streak.current })} />
+        <StatPill emoji="🔥" label={t('home:stats.streak', { n: streak?.current ?? 0 })} />
         <StatPill
           emoji="🪙"
           label={t('home:stats.coins', { n: formatNumber(coins, locale) })}
@@ -238,18 +252,6 @@ export function HomeScreen() {
                 <div className="text-sm text-[var(--muted)]">{t('home:cards.badgesHint')}</div>
               </div>
               <div className="text-4xl">🏅</div>
-            </div>
-          </Card>
-        </Link>
-
-        <Link to="/parent">
-          <Card className="active:scale-[0.99]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-lg font-extrabold">{t('home:cards.parent')}</div>
-                <div className="text-sm text-[var(--muted)]">{t('home:cards.parentHint')}</div>
-              </div>
-              <div className="text-4xl">👪</div>
             </div>
           </Card>
         </Link>

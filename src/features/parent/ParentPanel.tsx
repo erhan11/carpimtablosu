@@ -1,147 +1,129 @@
-import { useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
 import { formatDayForLocale, getLocalDay } from '@/lib/date/localDay'
-import { formatNumber, formatPercent } from '@/lib/format'
-import { rollLast7Days, useProgressStore } from '@/lib/progress/store'
+import { formatFactDisplay } from '@/lib/adaptive/adaptive'
+import { getEffectiveProgramStart, getPlanWeekRow } from '@/lib/plan/programWeek'
+import { useProgressStore } from '@/lib/progress/store'
 
-const BADGES: { id: string; key: string }[] = [
-  { id: 'streak3', key: 'streak3' },
-  { id: 'streak7', key: 'streak7' },
-  { id: 'coins50', key: 'coins50' },
-  { id: 'tables4', key: 'tables4' },
-  { id: 'facts30', key: 'facts30' },
-]
+const BAR_MAX_PX = 40
+const BAR_MIN_PX = 4
+
+function rollLast7PracticeCounts(
+  practiceByDay: { date: string; factKeys: string[] }[],
+): { date: string; count: number }[] {
+  const out: { date: string; count: number }[] = []
+  for (let i = 6; i >= 0; i -= 1) {
+    const dt = new Date()
+    dt.setHours(0, 0, 0, 0)
+    dt.setDate(dt.getDate() - i)
+    const key = getLocalDay(dt)
+    const found = practiceByDay.find((d) => d.date === key)
+    const fk = found?.factKeys
+    const count = Array.isArray(fk) ? fk.length : 0
+    out.push({ date: key, count })
+  }
+  return out
+}
 
 export function ParentPanel() {
-  const renderCountRef = useRef(0)
-  renderCountRef.current += 1
-  // #region agent log
-  if (renderCountRef.current <= 10) {
-    fetch('http://127.0.0.1:7270/ingest/eb6efa66-208f-401b-a382-118f7c3aaa35', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '39b93c' },
-      body: JSON.stringify({
-        sessionId: '39b93c',
-        runId: 'post-fix',
-        hypothesisId: 'H-zustand-array',
-        location: 'ParentPanel.tsx:render',
-        message: 'ParentPanel render',
-        data: { renderCount: renderCountRef.current },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-  }
-  // #endregion
-  const { t, i18n } = useTranslation(['parent', 'home'])
-  const mastered = useProgressStore((s) => s.masteredFacts.length)
-  const weak = useProgressStore((s) => s.weakFacts)
-  const last7Raw = useProgressStore((s) => s.last7DaysRaw)
-  const earned = useProgressStore((s) => s.earnedBadges)
-
-  const last7 = useMemo(() => rollLast7Days(last7Raw), [last7Raw])
+  const { t, i18n } = useTranslation(['parent', 'learn'])
+  const weakFacts = useProgressStore((s) => s.weakFacts ?? [])
+  const practiceByDay = useProgressStore((s) => s.practiceByDay ?? [])
+  const streak = useProgressStore((s) => s.streak)
+  const programStartDate = useProgressStore((s) => s.programStartDate)
 
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
 
-  const totals = useMemo(() => {
-    const today = getLocalDay()
-    const todayRow = last7Raw.find((d) => d.date === today)
-    const minutesToday = todayRow?.minutes ?? 0
-    const correct = last7Raw.reduce((a, d) => a + d.correct, 0)
-    const wrong = last7Raw.reduce((a, d) => a + d.wrong, 0)
-    const rate = correct + wrong === 0 ? 0 : correct / (correct + wrong)
-    return { minutesToday, correct, wrong, rate }
-  }, [last7Raw])
+  const topDifficult = useMemo(() => weakFacts.slice(0, 5), [weakFacts])
 
-  const weakLabel =
-    weak.length === 0
-      ? t('parent:empty')
-      : weak
-          .slice(0, 8)
-          .map((w) => w.key)
-          .join(', ')
+  const last7 = useMemo(() => rollLast7PracticeCounts(practiceByDay), [practiceByDay])
+
+  const maxCount = useMemo(() => Math.max(1, ...last7.map((d) => d.count)), [last7])
+
+  const weekFocusText = useMemo(() => {
+    const effectiveStart = getEffectiveProgramStart(programStartDate)
+    const row = getPlanWeekRow(effectiveStart, getLocalDay())
+    const tables = row.tables
+    if (tables.length === 0) return '—'
+    const lf = new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' })
+    return lf.format(tables.map((n) => t('learn:tableLabel', { n })))
+  }, [locale, programStartDate, t])
+
+  const streakCount = streak?.current ?? 0
+
+  const weekdayLongFmt = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: 'long' }),
+    [locale],
+  )
 
   return (
     <MainLayout title={t('parent:title')} showBackTo="/">
-      <div className="text-sm text-[var(--muted)]">{t('parent:intro')}</div>
+      <div className="flex flex-col gap-4">
+        <Card>
+          <div className="text-sm font-extrabold text-[var(--muted)]">{t('parent:topDifficultFacts')}</div>
+          {topDifficult.length === 0 ? (
+            <div className="mt-2 text-sm text-[var(--muted)]">{t('parent:noDifficultFacts')}</div>
+          ) : (
+            <ul className="mt-2 space-y-1.5 text-lg font-extrabold">
+              {topDifficult.map((w) => (
+                <li key={w.key}>{formatFactDisplay(w.key, locale)}</li>
+              ))}
+            </ul>
+          )}
+        </Card>
 
-      <div className="mt-4 grid grid-cols-1 gap-3">
         <Card>
-          <div className="text-sm font-extrabold text-[var(--muted)]">{t('parent:stats.learned')}</div>
-          <div className="mt-1 text-3xl font-extrabold">{formatNumber(mastered, locale)}</div>
-        </Card>
-        <Card>
-          <div className="text-sm font-extrabold text-[var(--muted)]">{t('parent:stats.weak')}</div>
-          <div className="mt-1 text-sm font-bold">{t('parent:weakList', { list: weakLabel })}</div>
-        </Card>
-        <Card>
-          <div className="text-sm font-extrabold text-[var(--muted)]">{t('parent:stats.minutes')}</div>
-          <div className="mt-1 text-3xl font-extrabold">{formatNumber(totals.minutesToday, locale)}</div>
-        </Card>
-        <Card>
-          <div className="text-sm font-extrabold text-[var(--muted)]">{t('parent:stats.ratio')}</div>
-          <div className="mt-1 text-lg font-extrabold">
-            {formatNumber(totals.correct, locale)} / {formatNumber(totals.wrong, locale)}
-          </div>
-          <div className="mt-1 text-sm text-[var(--muted)]">
-            {t('parent:stats.accuracy', { rate: formatPercent(totals.rate, locale) })}
-          </div>
-        </Card>
-      </div>
-
-      <Card className="mt-4">
-        <div className="text-lg font-extrabold">{t('parent:chart.title')}</div>
-        <div className="mt-3 flex items-end gap-2">
-          {(() => {
-            const maxM = Math.max(1, ...last7.map((x) => x.minutes))
-            return last7.map((d) => {
-              const h = Math.round((d.minutes / maxM) * 96)
+          <div className="text-sm font-extrabold text-[var(--muted)]">{t('parent:last7Days')}</div>
+          <div className="mt-3 flex gap-2">
+            {last7.map((d) => {
+              const c = d.count
+              const h =
+                c === 0
+                  ? 0
+                  : Math.round(BAR_MIN_PX + (c / maxCount) * (BAR_MAX_PX - BAR_MIN_PX))
+              const [y, mo, da] = d.date.split('-').map(Number)
+              const dayDate = new Date(y, mo - 1, da)
+              const weekday = Number.isNaN(dayDate.getTime())
+                ? d.date
+                : weekdayLongFmt.format(dayDate)
               return (
-                <div key={d.date} className="flex flex-1 flex-col items-center gap-2">
+                <div key={d.date} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
                   <div
-                    className="w-full rounded-xl bg-[var(--primary)]/70"
-                    style={{ height: `${Math.max(8, h)}px` }}
-                  />
-                  <div className="text-[10px] font-bold text-[var(--muted)]">
+                    className="flex w-full items-end justify-center"
+                    style={{ height: BAR_MAX_PX }}
+                  >
+                    <div
+                      className="w-full rounded-lg bg-[var(--primary)]"
+                      style={{ height: `${h}px` }}
+                      role="img"
+                      aria-label={t('parent:activity', { weekday, count: c })}
+                    />
+                  </div>
+                  <div className="truncate text-center text-[10px] font-bold text-[var(--muted)]">
                     {formatDayForLocale(d.date, locale)}
                   </div>
                 </div>
               )
-            })
-          })()}
-        </div>
-        <div className="mt-2 text-xs text-[var(--muted)]">{t('parent:chart.minutes')}</div>
-      </Card>
+            })}
+          </div>
+        </Card>
 
-      <Card className="mt-4">
-        <div className="text-lg font-extrabold">{t('parent:tips.title')}</div>
-        <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[var(--muted)]">
-          <li>{t('parent:tips.a')}</li>
-          <li>{t('parent:tips.b')}</li>
-          <li>{t('parent:tips.c')}</li>
-        </ul>
-      </Card>
+        <Card>
+          <div className="text-sm font-extrabold text-[var(--muted)]">{t('parent:currentStreak')}</div>
+          {streakCount === 0 ? (
+            <div className="mt-2 text-lg font-extrabold">{t('parent:startStreak')}</div>
+          ) : (
+            <div className="mt-2 text-lg font-extrabold">{t('parent:days', { count: streakCount })}</div>
+          )}
+        </Card>
 
-      <Card className="mt-4">
-        <div className="text-lg font-extrabold">{t('home:badges.title')}</div>
-        <div className="mt-3 grid grid-cols-1 gap-2">
-          {BADGES.map((b) => {
-            const on = earned.includes(b.id)
-            return (
-              <div
-                key={b.id}
-                className={`rounded-2xl border-2 px-3 py-2 text-sm font-extrabold ${
-                  on ? 'border-[var(--success)] bg-[#e9fffb]' : 'border-[#e6edf7] bg-white'
-                }`}
-              >
-                {on ? '✅ ' : '🔒 '}
-                {t(`home:badges.${b.key}`)}
-              </div>
-            )
-          })}
-        </div>
-      </Card>
+        <Card>
+          <div className="text-sm font-extrabold text-[var(--muted)]">{t('parent:thisWeekFocus')}</div>
+          <div className="mt-2 text-base font-extrabold leading-snug">{weekFocusText}</div>
+        </Card>
+      </div>
     </MainLayout>
   )
 }

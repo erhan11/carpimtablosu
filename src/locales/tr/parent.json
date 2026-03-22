@@ -1,24 +1,12 @@
 {
-  "title": "Ebeveyn alanı",
-  "intro": "Burada sadece ilerlemeyi görürsün.",
-  "stats": {
-    "learned": "Öğrenilen çarpımlar",
-    "weak": "Zorlanılanlar",
-    "minutes": "Bugünkü süre (yaklaşık)",
-    "ratio": "Doğru / yanlış",
-    "accuracy": "Doğruluk: {{rate}} %"
-  },
-  "chart": {
-    "title": "Son 7 gün",
-    "minutes": "Dakika",
-    "answers": "Cevaplar"
-  },
-  "tips": {
-    "title": "Kısa öneriler",
-    "a": "Kısa seanslar: 5–10 dakika yeter.",
-    "b": "Yanlışta nazik kalın; tekrar oyunla pekişir.",
-    "c": "Her gün küçük bir adım büyük fark yaratır."
-  },
-  "empty": "Henüz veri yok.",
-  "weakList": "{{list}}"
+  "title": "Ebeveyn",
+  "nav": "Ebeveyn",
+  "topDifficultFacts": "En zor çarpımlar",
+  "noDifficultFacts": "Henüz zorlanılan çarpım yok",
+  "last7Days": "Son 7 gün",
+  "currentStreak": "Günlük seri",
+  "startStreak": "Bugün serine başla",
+  "thisWeekFocus": "Bu haftanın odağı",
+  "days": "{{count}} gün",
+  "activity": "{{weekday}}: {{count}} cevap"
 }

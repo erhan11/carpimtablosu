@@ -39,6 +39,7 @@ export default defineConfig({
           },
         ],
         lang: 'tr',
+        categories: ['education', 'kids'],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
