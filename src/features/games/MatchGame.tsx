@@ -1,15 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
-import { factKey, pickQuestion, type Question } from '@/lib/math/questionBank'
+import { parseTableQuery } from '@/lib/adaptive/adaptive'
+import { useRecordAdaptiveSession } from '@/lib/adaptive/useAdaptiveSession'
+import {
+  factKey,
+  normalizeFactKeyFromInput,
+  pickQuestion,
+  pickQuestionAdaptive,
+  type Question,
+} from '@/lib/math/questionBank'
 import { useProgressStore, useWeakKeys } from '@/lib/progress/store'
 
 export function MatchGame() {
   const { t, i18n } = useTranslation(['games', 'common'])
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const targetFactKey = normalizeFactKeyFromInput(searchParams.get('fact'))
+  const tableFocus = parseTableQuery(searchParams.get('table'))
+
+  useRecordAdaptiveSession('match', targetFactKey)
+
   const unlocked = useProgressStore((s) => s.unlockedTableIds)
   const weak = useWeakKeys()
   const recordAnswer = useProgressStore((s) => s.recordAnswer)
@@ -19,9 +33,16 @@ export function MatchGame() {
 
   const questions = useMemo(() => {
     const qs: Question[] = []
-    for (let i = 0; i < 4; i += 1) qs.push(pickQuestion(unlocked, weak))
+    for (let i = 0; i < 4; i += 1) {
+      qs.push(
+        targetFactKey || tableFocus !== undefined
+          ? pickQuestionAdaptive(unlocked, weak, targetFactKey ?? undefined, i, 4, tableFocus)
+          : pickQuestion(unlocked, weak),
+      )
+    }
     return qs
-  }, [unlocked, weak, round])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- round bumps deck
+  }, [unlocked, weak, round, targetFactKey, tableFocus])
 
   const answers = useMemo(() => {
     const nums = questions.map((q) => q.a * q.b)
@@ -44,11 +65,13 @@ export function MatchGame() {
     }
     if (advanceGuardRef.current) return
     advanceGuardRef.current = true
-    setRound((r) => r + 1)
-    setMatchedKeys(new Set())
-    setPickedQ(null)
-    setPickedN(null)
-    setHint(t('games:match.tapFirst'))
+    queueMicrotask(() => {
+      setRound((r) => r + 1)
+      setMatchedKeys(new Set())
+      setPickedQ(null)
+      setPickedN(null)
+      setHint(t('games:match.tapFirst'))
+    })
   }, [questions, matchedKeys, t])
 
   function isMatched(q: Question) {

@@ -1,0 +1,16 @@
+{
+  "title": "Profile",
+  "avatar": {
+    "title": "Choose your avatar"
+  },
+  "theme": {
+    "title": "Theme color"
+  },
+  "stickers": {
+    "title": "Stickers"
+  },
+  "locked": "Locked",
+  "unlock": "Unlocked",
+  "selected": "Selected",
+  "coins": "Coins"
+}

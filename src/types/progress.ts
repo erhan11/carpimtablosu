@@ -14,6 +14,20 @@ export interface DayPracticeEntry {
   tables: number[]
 }
 
+export interface AdaptiveState {
+  /** Last recommended game id per fact key (e.g. "3x4") for rotation. */
+  recentRecommendedGameByFact: Record<string, string>
+  lastAdaptiveGameAt?: string
+}
+
+export interface CosmeticsState {
+  avatarId: string
+  themeId: string
+  stickersUnlocked: string[]
+  /** Avatars the child may select (free defaults + purchases + level unlocks). */
+  unlockedAvatarIds: string[]
+}
+
 export type DailyTaskId = 'solveWithCorrect' | 'reviewYesterday'
 
 export interface DailyQuestState {
@@ -54,11 +68,7 @@ export interface ProgressSnapshot {
   daily: DailyQuestState
   gamesStats: Record<string, { played: number; correct: number }>
   last7Days: DayStat[]
-  cosmetics: {
-    avatarId: string
-    themeId: string
-    unlockedStickers: string[]
-  }
+  cosmetics: CosmeticsState
   earnedBadges: string[]
   sessionStartMs: number
 }

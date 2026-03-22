@@ -10,8 +10,14 @@ import {
 } from '@/lib/progress/dailyQuest'
 import { upsertPracticeDay } from '@/lib/progress/practiceDay'
 import { defaultUnlockedTables, nextTableToUnlock } from '@/lib/math/questionBank'
+import { AVATARS } from '@/content/cosmetics/avatars'
+import { THEMES } from '@/content/cosmetics/themes'
+import { handleLevelRewards } from '@/lib/cosmetics/levelRewards'
+import { normalizeCosmetics } from '@/lib/cosmetics/normalize'
 import {
   PROGRESS_VERSION,
+  type AdaptiveState,
+  type CosmeticsState,
   type DayPracticeEntry,
   type LocaleCode,
   type TableId,
@@ -42,7 +48,8 @@ function bumpDayStats(
   return next
 }
 
-function rollLast7Days(
+/** Exported for UI that derives the 7-day rollups from `last7DaysRaw` without unstable Zustand selectors. */
+export function rollLast7Days(
   days: { date: string; minutes: number; correct: number; wrong: number }[],
 ): { date: string; minutes: number; correct: number; wrong: number }[] {
   const out: { date: string; minutes: number; correct: number; wrong: number }[] = []
@@ -114,15 +121,12 @@ export interface ProgressState {
   practiceByDay: DayPracticeEntry[]
   gamesStats: Record<string, { played: number; correct: number }>
   last7DaysRaw: { date: string; minutes: number; correct: number; wrong: number }[]
-  cosmetics: {
-    avatarId: string
-    themeId: string
-    unlockedStickers: string[]
-  }
+  cosmetics: CosmeticsState
   earnedBadges: string[]
   soundEnabled: boolean
   /** Local YYYY-MM-DD when the 3-month guided program started; set on first daily ensure if missing. */
   programStartDate?: string
+  adaptive: AdaptiveState
   setLocale: (locale: LocaleCode) => void
   setSoundEnabled: (value: boolean) => void
   completeLanguageSelect: (locale: LocaleCode) => void
@@ -138,6 +142,9 @@ export interface ProgressState {
   maybeAwardBadges: () => void
   resetProgress: () => void
   getLast7Days: () => { date: string; minutes: number; correct: number; wrong: number }[]
+  selectAvatar: (avatarId: string) => void
+  setThemeId: (themeId: string) => void
+  recordAdaptivePlay: (factKey: string, mode: string) => void
 }
 
 const dataDefaults = () => ({
@@ -162,13 +169,18 @@ const dataDefaults = () => ({
     correct: number
     wrong: number
   }[],
-  cosmetics: {
-    avatarId: 'fox',
-    themeId: 'sunny',
-    unlockedStickers: [] as string[],
-  },
+  cosmetics: normalizeCosmetics({
+    avatarId: 'cat',
+    themeId: 'blue',
+    stickersUnlocked: [],
+    unlockedAvatarIds: ['cat'],
+  }),
   earnedBadges: [] as string[],
   soundEnabled: true,
+  adaptive: {
+    recentRecommendedGameByFact: {} as Record<string, string>,
+    lastAdaptiveGameAt: undefined,
+  },
 })
 
 export const useProgressStore = create<ProgressState>()(
@@ -213,8 +225,10 @@ export const useProgressStore = create<ProgressState>()(
         const key = factKey(question)
         const today = getLocalDay()
         let dailyJustCompleted = false
+        let levelRewardUnlocked = false
         set((state) => {
           const effectiveStart = state.programStartDate ?? today
+          const prevLevel = state.level
           const streak = touchStreak(state.streak)
           const gs = { ...state.gamesStats }
           const prevGs = gs[gameId] ?? { played: 0, correct: 0 }
@@ -229,6 +243,7 @@ export const useProgressStore = create<ProgressState>()(
           let stars = state.stars
           let xp = state.xp
           let level = state.level
+          let cosmetics = normalizeCosmetics(state.cosmetics)
           if (correct) {
             coins += 1
             xp += 5
@@ -238,6 +253,11 @@ export const useProgressStore = create<ProgressState>()(
             while (xp >= level * 60) {
               xp -= level * 60
               level += 1
+            }
+            if (level > prevLevel) {
+              const rewards = handleLevelRewards(prevLevel, level, cosmetics)
+              cosmetics = rewards.cosmetics
+              if (rewards.unlockedSomething) levelRewardUnlocked = true
             }
           } else {
             weakFacts = upsertWeak(weakFacts, key)
@@ -292,6 +312,7 @@ export const useProgressStore = create<ProgressState>()(
             stars,
             xp,
             level,
+            cosmetics,
             last7DaysRaw,
             practiceByDay,
             daily,
@@ -307,6 +328,9 @@ export const useProgressStore = create<ProgressState>()(
           if (next.level > prev.level) {
             window.setTimeout(() => s.playLevelUp(), 55)
           }
+          if (levelRewardUnlocked) {
+            window.setTimeout(() => s.playReward(), 115)
+          }
           const milestones = [3, 7, 14, 30]
           if (
             milestones.includes(next.streak.current) &&
@@ -318,6 +342,60 @@ export const useProgressStore = create<ProgressState>()(
             window.setTimeout(() => s.playSuccess(), 175)
           }
         })
+      },
+
+      selectAvatar: (avatarId) => {
+        set((state) => {
+          const cos = normalizeCosmetics(state.cosmetics)
+          const avatar = AVATARS.find((a) => a.id === avatarId)
+          if (!avatar) {
+            return { ...state, cosmetics: { ...cos, avatarId: 'cat' } }
+          }
+          const unlocked = new Set(cos.unlockedAvatarIds)
+          if (avatar.cost === 0) {
+            return { ...state, cosmetics: { ...cos, avatarId: avatar.id } }
+          }
+          if (unlocked.has(avatar.id)) {
+            return { ...state, cosmetics: { ...cos, avatarId: avatar.id } }
+          }
+          if (state.coins < avatar.cost) {
+            return state
+          }
+          return {
+            ...state,
+            coins: state.coins - avatar.cost,
+            cosmetics: {
+              ...cos,
+              avatarId: avatar.id,
+              unlockedAvatarIds: [...unlocked, avatar.id],
+            },
+          }
+        })
+      },
+
+      setThemeId: (themeId) => {
+        set((state) => {
+          const cos = normalizeCosmetics(state.cosmetics)
+          const theme = THEMES.find((t) => t.id === themeId)
+          if (!theme) return state
+          if (theme.requiresLevel !== undefined && state.level < theme.requiresLevel) {
+            return state
+          }
+          return { ...state, cosmetics: { ...cos, themeId: theme.id } }
+        })
+      },
+
+      recordAdaptivePlay: (factKey, mode) => {
+        set((state) => ({
+          ...state,
+          adaptive: {
+            recentRecommendedGameByFact: {
+              ...state.adaptive.recentRecommendedGameByFact,
+              [factKey]: mode,
+            },
+            lastAdaptiveGameAt: getLocalDay(),
+          },
+        }))
       },
 
       addBossBonusStars: (amount) => {
@@ -359,6 +437,24 @@ export const useProgressStore = create<ProgressState>()(
     }),
     {
       name: STORAGE_KEY,
+      merge: (persisted, current) => {
+        const p = persisted as Partial<ProgressState> | undefined
+        const c = current as ProgressState
+        if (!p || typeof p !== 'object') return c
+        const merged = { ...c, ...p } as ProgressState
+        merged.cosmetics = normalizeCosmetics({
+          ...c.cosmetics,
+          ...(p.cosmetics as Partial<CosmeticsState> & { unlockedStickers?: string[] }),
+        })
+        merged.adaptive = {
+          recentRecommendedGameByFact: {
+            ...c.adaptive.recentRecommendedGameByFact,
+            ...(p.adaptive?.recentRecommendedGameByFact ?? {}),
+          },
+          lastAdaptiveGameAt: p.adaptive?.lastAdaptiveGameAt ?? c.adaptive.lastAdaptiveGameAt,
+        }
+        return merged
+      },
       partialize: (s) => ({
         version: s.version,
         locale: s.locale,
@@ -379,6 +475,7 @@ export const useProgressStore = create<ProgressState>()(
         earnedBadges: s.earnedBadges,
         soundEnabled: s.soundEnabled,
         programStartDate: s.programStartDate,
+        adaptive: s.adaptive,
       }),
     },
   ),

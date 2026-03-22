@@ -8,6 +8,8 @@ import { MatchGame } from '@/features/games/MatchGame'
 import { MemoryGame } from '@/features/games/MemoryGame'
 import { SprintGame } from '@/features/games/SprintGame'
 import { HomeScreen } from '@/features/home/HomeScreen'
+import { ProfileScreen } from '@/features/profile/ProfileScreen'
+import { ThemeSync } from '@/features/profile/ThemeSync'
 import { LearnSession } from '@/features/learn/LearnSession'
 import { LanguageSelect } from '@/features/onboarding/LanguageSelect'
 import { ParentPanel } from '@/features/parent/ParentPanel'
@@ -43,7 +45,12 @@ function RouteShell() {
     return <Navigate to="/" replace />
   }
 
-  return <Outlet />
+  return (
+    <>
+      <ThemeSync />
+      <Outlet />
+    </>
+  )
 }
 
 export default function App() {
@@ -52,6 +59,7 @@ export default function App() {
       <Route element={<RouteShell />}>
         <Route path="/language" element={<LanguageSelect />} />
         <Route path="/" element={<HomeScreen />} />
+        <Route path="/profile" element={<ProfileScreen />} />
         <Route path="/learn" element={<LearnSession />} />
         <Route path="/games" element={<GamesHub />} />
         <Route path="/games/balloon" element={<BalloonGame />} />

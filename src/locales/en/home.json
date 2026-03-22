@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "profile": "Profile"
+  },
   "greeting": "Hi there!",
   "tagline": "Let’s take a small step today.",
   "cards": {
@@ -29,6 +32,12 @@
   "weeklyPlan": {
     "currentWeek": "Week {{current}} of {{total}}",
     "thisWeekFocus": "This week: {{tables}}"
+  },
+  "adaptive": {
+    "recommendedForYou": "Recommended for you",
+    "practiceFactWithGame": "Practice {{fact}} with {{game}}",
+    "adaptiveSuggestion": "Same fact, different game — keeps practice fresh.",
+    "cta": "Let’s go"
   },
   "dailyQuest": {
     "title": "Daily quest",

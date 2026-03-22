@@ -21,7 +21,9 @@ export function MainLayout({
         >
           ← {t('back')}
         </Link>
-        {title ? <h1 className="text-xl font-extrabold">{title}</h1> : null}
+        {title ? (
+          <h1 className="text-xl font-extrabold text-[var(--primary-dark)]">{title}</h1>
+        ) : null}
       </header>
       <main className="flex-1">{children}</main>
     </div>

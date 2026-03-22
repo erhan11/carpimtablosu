@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "profile": "Profil"
+  },
   "greeting": "Merhaba!",
   "tagline": "Bugün küçük bir adım atalım.",
   "cards": {
@@ -29,6 +32,12 @@
   "weeklyPlan": {
     "currentWeek": "{{total}} haftanın {{current}}. haftası",
     "thisWeekFocus": "Bu hafta: {{tables}}"
+  },
+  "adaptive": {
+    "recommendedForYou": "Senin için önerilen",
+    "practiceFactWithGame": "{{fact}} işlemini {{game}} ile çalış",
+    "adaptiveSuggestion": "Aynı çarpım, farklı oyun — tekrar sıkmaz.",
+    "cta": "Hadi"
   },
   "dailyQuest": {
     "title": "Günlük görev",

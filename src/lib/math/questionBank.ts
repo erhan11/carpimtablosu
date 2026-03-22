@@ -53,6 +53,60 @@ export function pickQuestionForTable(table: number): Question {
   return { a: table, b: randomInt(1, 10) }
 }
 
+/** Parse "3x4", "4x3", or "3-4" into a canonical multiplication question (sorted factors). */
+export function parseFactKeyString(raw: string): Question | null {
+  const s = raw.trim().toLowerCase().replace(/×/g, 'x')
+  const parts = s.split(/x|-/).map((p) => Number(p.trim()))
+  if (parts.length !== 2 || parts.some((n) => !Number.isInteger(n) || n < 1 || n > 10)) {
+    return null
+  }
+  const [x, y] = parts.sort((a, b) => a - b) as [number, number]
+  return { a: x, b: y }
+}
+
+export function normalizeFactKeyFromInput(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const q = parseFactKeyString(raw)
+  if (!q) return null
+  return factKey(q)
+}
+
+export function factInvolvesUnlockedTables(q: Question, unlockedTableIds: TableId[]): boolean {
+  return isTableUnlocked(unlockedTableIds, q.a) && isTableUnlocked(unlockedTableIds, q.b)
+}
+
+/**
+ * Bias early slots toward a target fact (or table-only focus); then mix with weak + generic.
+ * @param totalSlots — expected questions per "session slice" (e.g. 4 for match deck, 12 for balloon run)
+ */
+export function pickQuestionAdaptive(
+  unlockedTableIds: TableId[],
+  weakKeys: string[],
+  targetFactKey: string | undefined,
+  slotIndex: number,
+  totalSlots: number,
+  tableFocus?: number,
+): Question {
+  const biasWindow = Math.min(3, totalSlots)
+  const inBias = slotIndex < biasWindow
+
+  if (targetFactKey && inBias && Math.random() < 0.68) {
+    const q = parseFactKeyString(targetFactKey)
+    if (q && factInvolvesUnlockedTables(q, unlockedTableIds)) {
+      return q
+    }
+  }
+
+  if (tableFocus !== undefined && inBias && Math.random() < 0.65) {
+    return pickQuestionForTable(tableFocus)
+  }
+
+  const pref = targetFactKey
+    ? [targetFactKey, ...weakKeys.filter((k) => k !== targetFactKey)]
+    : weakKeys
+  return pickQuestion(unlockedTableIds, pref)
+}
+
 export function wrongAnswers(correct: number, count: number, max = 100): number[] {
   const set = new Set<number>()
   set.add(correct)

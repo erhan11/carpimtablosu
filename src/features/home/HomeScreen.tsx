@@ -14,6 +14,12 @@ import {
   weekFocusNumbers,
 } from '@/lib/plan/programWeek'
 import { yesterdayFrom } from '@/lib/progress/dailyQuest'
+import {
+  buildAdaptiveGamePath,
+  formatFactDisplay,
+  nextAdaptiveMode,
+  pickWeakFactForAdaptive,
+} from '@/lib/adaptive/adaptive'
 import { formatNumber } from '@/lib/format'
 import { useProgressStore } from '@/lib/progress/store'
 
@@ -27,7 +33,7 @@ function StatPill({ emoji, label }: { emoji: string; label: string }) {
 }
 
 export function HomeScreen() {
-  const { t, i18n } = useTranslation(['home', 'common', 'learn'])
+  const { t, i18n } = useTranslation(['home', 'common', 'learn', 'games'])
   const coins = useProgressStore((s) => s.coins)
   const stars = useProgressStore((s) => s.stars)
   const streak = useProgressStore((s) => s.streak)
@@ -38,6 +44,8 @@ export function HomeScreen() {
   const ensureDaily = useProgressStore((s) => s.ensureDaily)
   const programStartDate = useProgressStore((s) => s.programStartDate)
   const unlockedIds = useProgressStore((s) => s.unlockedTableIds)
+  const weakFacts = useProgressStore((s) => s.weakFacts)
+  const adaptiveState = useProgressStore((s) => s.adaptive)
 
   const today = getLocalDay()
   const yesterday = yesterdayFrom(today)
@@ -77,6 +85,17 @@ export function HomeScreen() {
         ? `/learn?table=${focusPool[0]}`
         : '/games'
 
+  const adaptiveRec = useMemo(() => {
+    const factKey = pickWeakFactForAdaptive(weakFacts, unlockedIds)
+    if (!factKey) return null
+    const mode = nextAdaptiveMode(adaptiveState.recentRecommendedGameByFact, factKey)
+    return {
+      factKey,
+      mode,
+      to: buildAdaptiveGamePath(mode, factKey),
+    }
+  }, [weakFacts, unlockedIds, adaptiveState.recentRecommendedGameByFact])
+
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col gap-4 px-4 pb-10 pt-[max(16px,env(safe-area-inset-top))]">
       <header className="flex items-start justify-between gap-3">
@@ -84,12 +103,21 @@ export function HomeScreen() {
           <div className="text-3xl font-extrabold">{t('home:greeting')}</div>
           <div className="mt-1 text-sm text-[var(--muted)]">{t('home:tagline')}</div>
         </div>
-        <Link
-          to="/settings"
-          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-white/80 px-3 font-extrabold shadow"
-        >
-          ⚙️
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            to="/profile"
+            className="inline-flex min-h-[44px] min-w-[56px] flex-col items-center justify-center rounded-2xl bg-white/80 px-2 py-1 text-center text-[10px] font-extrabold leading-tight shadow"
+          >
+            <span className="text-lg leading-none">👤</span>
+            {t('home:nav.profile')}
+          </Link>
+          <Link
+            to="/settings"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-white/80 px-3 font-extrabold shadow"
+          >
+            ⚙️
+          </Link>
+        </div>
       </header>
 
       <div className="rounded-2xl bg-white/70 px-3 py-2 text-sm shadow">
@@ -155,6 +183,27 @@ export function HomeScreen() {
         </Link>
       </Card>
       </motion.div>
+
+      {adaptiveRec ? (
+        <Card className="border-2 border-[var(--primary)]/20 bg-white/90 px-3 py-3 shadow">
+          <div className="text-sm font-extrabold text-[var(--primary-dark)]">
+            {t('home:adaptive.recommendedForYou')}
+          </div>
+          <div className="mt-1 text-sm">
+            {t('home:adaptive.practiceFactWithGame', {
+              fact: formatFactDisplay(adaptiveRec.factKey, locale),
+              game: t(`games:modes.${adaptiveRec.mode}`),
+            })}
+          </div>
+          <div className="mt-1 text-xs text-[var(--muted)]">{t('home:adaptive.adaptiveSuggestion')}</div>
+          <Link
+            to={adaptiveRec.to}
+            className="mt-3 block rounded-2xl bg-[var(--accent)]/20 px-4 py-3 text-center font-extrabold text-[var(--primary-dark)]"
+          >
+            {t('home:adaptive.cta')} →
+          </Link>
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3">
         <Link to="/learn">

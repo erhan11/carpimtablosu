@@ -1,0 +1,16 @@
+{
+  "title": "Profil",
+  "avatar": {
+    "title": "Avatar seç"
+  },
+  "theme": {
+    "title": "Tema rengi"
+  },
+  "stickers": {
+    "title": "Çıkartmalar"
+  },
+  "locked": "Kilitli",
+  "unlock": "Açıldı",
+  "selected": "Seçili",
+  "coins": "Madeni para"
+}

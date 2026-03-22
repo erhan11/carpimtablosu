@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
 import { formatDayForLocale, getLocalDay } from '@/lib/date/localDay'
 import { formatNumber, formatPercent } from '@/lib/format'
-import { useProgressStore } from '@/lib/progress/store'
+import { rollLast7Days, useProgressStore } from '@/lib/progress/store'
 
 const BADGES: { id: string; key: string }[] = [
   { id: 'streak3', key: 'streak3' },
@@ -15,12 +15,32 @@ const BADGES: { id: string; key: string }[] = [
 ]
 
 export function ParentPanel() {
+  const renderCountRef = useRef(0)
+  renderCountRef.current += 1
+  // #region agent log
+  if (renderCountRef.current <= 10) {
+    fetch('http://127.0.0.1:7270/ingest/eb6efa66-208f-401b-a382-118f7c3aaa35', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '39b93c' },
+      body: JSON.stringify({
+        sessionId: '39b93c',
+        runId: 'post-fix',
+        hypothesisId: 'H-zustand-array',
+        location: 'ParentPanel.tsx:render',
+        message: 'ParentPanel render',
+        data: { renderCount: renderCountRef.current },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+  }
+  // #endregion
   const { t, i18n } = useTranslation(['parent', 'home'])
   const mastered = useProgressStore((s) => s.masteredFacts.length)
   const weak = useProgressStore((s) => s.weakFacts)
-  const last7 = useProgressStore((s) => s.getLast7Days())
   const last7Raw = useProgressStore((s) => s.last7DaysRaw)
   const earned = useProgressStore((s) => s.earnedBadges)
+
+  const last7 = useMemo(() => rollLast7Days(last7Raw), [last7Raw])
 
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
 
@@ -73,21 +93,23 @@ export function ParentPanel() {
       <Card className="mt-4">
         <div className="text-lg font-extrabold">{t('parent:chart.title')}</div>
         <div className="mt-3 flex items-end gap-2">
-          {last7.map((d) => {
+          {(() => {
             const maxM = Math.max(1, ...last7.map((x) => x.minutes))
-            const h = Math.round((d.minutes / maxM) * 96)
-            return (
-              <div key={d.date} className="flex flex-1 flex-col items-center gap-2">
-                <div
-                  className="w-full rounded-xl bg-[var(--primary)]/70"
-                  style={{ height: `${Math.max(8, h)}px` }}
-                />
-                <div className="text-[10px] font-bold text-[var(--muted)]">
-                  {formatDayForLocale(d.date, locale)}
+            return last7.map((d) => {
+              const h = Math.round((d.minutes / maxM) * 96)
+              return (
+                <div key={d.date} className="flex flex-1 flex-col items-center gap-2">
+                  <div
+                    className="w-full rounded-xl bg-[var(--primary)]/70"
+                    style={{ height: `${Math.max(8, h)}px` }}
+                  />
+                  <div className="text-[10px] font-bold text-[var(--muted)]">
+                    {formatDayForLocale(d.date, locale)}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })
+          })()}
         </div>
         <div className="mt-2 text-xs text-[var(--muted)]">{t('parent:chart.minutes')}</div>
       </Card>

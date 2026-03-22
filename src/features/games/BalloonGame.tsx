@@ -1,21 +1,41 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
-import { pickQuestion, wrongAnswers } from '@/lib/math/questionBank'
+import { parseTableQuery } from '@/lib/adaptive/adaptive'
+import { useRecordAdaptiveSession } from '@/lib/adaptive/useAdaptiveSession'
+import {
+  normalizeFactKeyFromInput,
+  pickQuestion,
+  pickQuestionAdaptive,
+  wrongAnswers,
+} from '@/lib/math/questionBank'
 import { shuffleInPlace } from '@/lib/math/shuffle'
 import { useProgressStore, useWeakKeys } from '@/lib/progress/store'
+
+const SESSION_SLOTS = 12
 
 export function BalloonGame() {
   const { t, i18n } = useTranslation(['games', 'common'])
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const factKey = normalizeFactKeyFromInput(searchParams.get('fact'))
+  const tableFocus = parseTableQuery(searchParams.get('table'))
+
+  useRecordAdaptiveSession('balloon', factKey)
+
   const unlocked = useProgressStore((s) => s.unlockedTableIds)
   const weak = useWeakKeys()
   const recordAnswer = useProgressStore((s) => s.recordAnswer)
 
-  const [q, setQ] = useState(() => pickQuestion(unlocked, weak))
+  const slotRef = useRef(0)
+  const [q, setQ] = useState(() =>
+    factKey || tableFocus !== undefined
+      ? pickQuestionAdaptive(unlocked, weak, factKey ?? undefined, 0, SESSION_SLOTS, tableFocus)
+      : pickQuestion(unlocked, weak),
+  )
   const [msg, setMsg] = useState<string | null>(null)
   const [choices, setChoices] = useState<number[]>([])
 
@@ -36,7 +56,19 @@ export function BalloonGame() {
     setMsg(ok ? t('common:feedback.doingGreat') : t('common:feedback.tryAgain'))
     window.setTimeout(() => {
       setMsg(null)
-      setQ(pickQuestion(unlocked, weak))
+      slotRef.current += 1
+      const nextQ =
+        factKey || tableFocus !== undefined
+          ? pickQuestionAdaptive(
+              unlocked,
+              weak,
+              factKey ?? undefined,
+              slotRef.current,
+              SESSION_SLOTS,
+              tableFocus,
+            )
+          : pickQuestion(unlocked, weak)
+      setQ(nextQ)
     }, 650)
   }
 

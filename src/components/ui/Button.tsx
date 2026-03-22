@@ -4,7 +4,7 @@ type Variant = 'primary' | 'ghost' | 'accent'
 
 const styles: Record<Variant, string> = {
   primary:
-    'bg-[var(--primary)] text-white shadow-[0_10px_0_#2f6fbf] active:translate-y-[2px] active:shadow-[0_8px_0_#2f6fbf]',
+    'bg-[var(--primary)] text-white shadow-[0_10px_0_var(--primary-shadow)] active:translate-y-[2px] active:shadow-[0_8px_0_var(--primary-shadow)]',
   ghost: 'bg-white/80 text-[var(--ink)] border-2 border-[#e6edf7]',
   accent:
     'bg-[var(--accent)] text-[#3a2f00] shadow-[0_10px_0_#d18b00] active:translate-y-[2px] active:shadow-[0_8px_0_#d18b00]',

@@ -1,19 +1,39 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { MainLayout } from '@/layouts/MainLayout'
-import { factKey, pickQuestion, type Question } from '@/lib/math/questionBank'
+import { parseTableQuery } from '@/lib/adaptive/adaptive'
+import { useRecordAdaptiveSession } from '@/lib/adaptive/useAdaptiveSession'
+import {
+  factKey,
+  normalizeFactKeyFromInput,
+  pickQuestion,
+  pickQuestionAdaptive,
+  type Question,
+} from '@/lib/math/questionBank'
 import { shuffleInPlace } from '@/lib/math/shuffle'
 import { useProgressStore, useWeakKeys } from '@/lib/progress/store'
 import type { TableId } from '@/types/progress'
 
 type CardDef = { id: string; label: string; key: string }
 
-function buildDeck(unlocked: TableId[], weak: string[], locale: string): CardDef[] {
+function buildDeck(
+  unlocked: TableId[],
+  weak: string[],
+  locale: string,
+  targetFactKey: string | null,
+  tableFocus: number | undefined,
+): CardDef[] {
   const qs: Question[] = []
-  for (let i = 0; i < 4; i += 1) qs.push(pickQuestion(unlocked, weak))
+  for (let i = 0; i < 4; i += 1) {
+    qs.push(
+      targetFactKey || tableFocus !== undefined
+        ? pickQuestionAdaptive(unlocked, weak, targetFactKey ?? undefined, i, 4, tableFocus)
+        : pickQuestion(unlocked, weak),
+    )
+  }
   const cards: CardDef[] = []
   for (const q of qs) {
     const k = factKey(q)
@@ -34,6 +54,12 @@ function buildDeck(unlocked: TableId[], weak: string[], locale: string): CardDef
 export function MemoryGame() {
   const { t, i18n } = useTranslation(['games', 'common'])
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const targetFactKey = normalizeFactKeyFromInput(searchParams.get('fact'))
+  const tableFocus = parseTableQuery(searchParams.get('table'))
+
+  useRecordAdaptiveSession('memory', targetFactKey)
+
   const unlocked = useProgressStore((s) => s.unlockedTableIds)
   const weak = useWeakKeys()
   const recordAnswer = useProgressStore((s) => s.recordAnswer)
@@ -41,11 +67,11 @@ export function MemoryGame() {
   const [deck, setDeck] = useState<CardDef[]>([])
 
   useEffect(() => {
-    const next = buildDeck(unlocked, weak, i18n.language)
+    const next = buildDeck(unlocked, weak, i18n.language, targetFactKey, tableFocus)
     queueMicrotask(() => {
       setDeck(next)
     })
-  }, [unlocked, weak, i18n.language])
+  }, [unlocked, weak, i18n.language, targetFactKey, tableFocus])
 
   const [open, setOpen] = useState<string[]>([])
   const [matched, setMatched] = useState<Set<string>>(() => new Set())
