@@ -24,6 +24,7 @@ import {
 import { fastTrackTableIds } from '@/lib/math/advancedQuestions'
 import {
   PROGRESS_VERSION,
+  toTableId,
   type AdaptiveState,
   type CosmeticsState,
   type DayPracticeEntry,
@@ -167,9 +168,16 @@ export interface ProgressState {
   difficultyScale: number
   speedBestApm: number
   lastBossLevelCompleted?: number
+  hasCompletedOnboarding: boolean
+  childStartingLevel: number
+  firstTablesUnlocked: number[]
+  onboardingCompletedAt?: string
+  onboardingStep: number
   setLocale: (locale: LocaleCode) => void
   setSoundEnabled: (value: boolean) => void
   completeLanguageSelect: (locale: LocaleCode) => void
+  completeOnboarding: (opts: { level: number; tables: number[]; difficulty: 'normal' | 'hard' }) => void
+  setOnboardingStep: (step: number) => void
   ensureDaily: () => void
   recordAnswer: (opts: {
     gameId: string
@@ -204,6 +212,11 @@ const dataDefaults = () => ({
   version: PROGRESS_VERSION,
   locale: 'tr' as LocaleCode,
   hasCompletedLanguageSelect: false,
+  hasCompletedOnboarding: false,
+  childStartingLevel: 1,
+  firstTablesUnlocked: [1] as number[],
+  onboardingCompletedAt: undefined,
+  onboardingStep: 0,
   coins: 0,
   stars: 0,
   level: 1,
@@ -269,6 +282,26 @@ export const useProgressStore = create<ProgressState>()(
           locale,
           streak: touchStreak(get().streak),
         })
+      },
+
+      completeOnboarding: ({ level, tables, difficulty }) => {
+        set((state) => {
+          const existingSet = new Set(state.unlockedTableIds)
+          tables.forEach((n) => existingSet.add(toTableId(n)))
+          return {
+            hasCompletedOnboarding: true,
+            childStartingLevel: level,
+            firstTablesUnlocked: tables,
+            onboardingCompletedAt: new Date().toISOString(),
+            onboardingStep: 0,
+            unlockedTableIds: [...existingSet] as TableId[],
+            advancedMode: difficulty === 'hard',
+          }
+        })
+      },
+
+      setOnboardingStep: (step) => {
+        set({ onboardingStep: Math.max(0, Math.min(3, step)) })
       },
 
       ensureDaily: () => {
@@ -739,12 +772,38 @@ export const useProgressStore = create<ProgressState>()(
           },
           lastAdaptiveGameAt: p.adaptive?.lastAdaptiveGameAt ?? c.adaptive.lastAdaptiveGameAt,
         }
+        merged.hasCompletedOnboarding =
+          typeof p.hasCompletedOnboarding === 'boolean'
+            ? p.hasCompletedOnboarding
+            : c.hasCompletedOnboarding
+        merged.childStartingLevel =
+          typeof p.childStartingLevel === 'number' && Number.isFinite(p.childStartingLevel)
+            ? Math.max(1, Math.floor(p.childStartingLevel))
+            : c.childStartingLevel
+        merged.firstTablesUnlocked = Array.isArray(p.firstTablesUnlocked)
+          ? (p.firstTablesUnlocked as unknown[]).filter(
+              (n): n is number => typeof n === 'number',
+            )
+          : c.firstTablesUnlocked
+        merged.onboardingCompletedAt =
+          typeof p.onboardingCompletedAt === 'string'
+            ? p.onboardingCompletedAt
+            : c.onboardingCompletedAt
+        merged.onboardingStep =
+          typeof p.onboardingStep === 'number' && Number.isFinite(p.onboardingStep)
+            ? Math.max(0, Math.min(3, Math.floor(p.onboardingStep)))
+            : c.onboardingStep
         return merged
       },
       partialize: (s) => ({
         version: s.version,
         locale: s.locale,
         hasCompletedLanguageSelect: s.hasCompletedLanguageSelect,
+        hasCompletedOnboarding: s.hasCompletedOnboarding,
+        childStartingLevel: s.childStartingLevel,
+        firstTablesUnlocked: s.firstTablesUnlocked,
+        onboardingCompletedAt: s.onboardingCompletedAt,
+        onboardingStep: s.onboardingStep,
         coins: s.coins,
         stars: s.stars,
         level: s.level,
