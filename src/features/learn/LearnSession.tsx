@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Celebration } from '@/components/ui/Celebration'
+import { CoachHintCard } from '@/components/CoachHintCard'
 import { MainLayout } from '@/layouts/MainLayout'
 import {
   allFactsForTable,
@@ -26,6 +27,7 @@ import {
 import { useProgressStore } from '@/lib/progress/store'
 import { playReward } from '@/services/sound'
 import { toTableId, type TableId } from '@/types/progress'
+import { getCoachHint } from '@/lib/coach/aiCoach'
 
 const MASTERY_LABEL_ORDER = ['starting', 'learning', 'strong', 'master'] as const
 
@@ -59,6 +61,14 @@ export function LearnSession() {
   const [options, setOptions] = useState<number[]>([])
   const [masteryToast, setMasteryToast] = useState<string | null>(null)
 
+  // Coach state
+  const [wrongAttemptsOnCurrentQuestion, setWrongAttempts] = useState(0)
+  const [currentHintLevel, setCurrentHintLevel] = useState<1 | 2 | 3 | 4 | null>(null)
+  const [coachVisible, setCoachVisible] = useState(false)
+  const [nudgeVisible, setNudgeVisible] = useState(false)
+  const nudgeTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+
+  const coachLocale = i18n.language.startsWith('tr') ? ('tr' as const) : ('en' as const)
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
   const masteryToastClearRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
 
@@ -92,7 +102,33 @@ export function LearnSession() {
     })
   }, [practiceFacts, practiceIndex, table])
 
+  // Reset coach state and start inactivity timer when question changes
+  useEffect(() => {
+    if (step !== 'practice') return
+    resetCoachState()
+    nudgeTimerRef.current = window.setTimeout(() => {
+      setNudgeVisible(true)
+    }, 8000)
+    return () => {
+      if (nudgeTimerRef.current !== null) {
+        window.clearTimeout(nudgeTimerRef.current)
+        nudgeTimerRef.current = null
+      }
+    }
+  }, [practiceIndex, step]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const autoStarted = useRef(false)
+
+  function resetCoachState() {
+    setWrongAttempts(0)
+    setCurrentHintLevel(null)
+    setCoachVisible(false)
+    setNudgeVisible(false)
+    if (nudgeTimerRef.current !== null) {
+      window.clearTimeout(nudgeTimerRef.current)
+      nudgeTimerRef.current = null
+    }
+  }
 
   const startTable = useCallback((n: number) => {
     setMasteryToast(null)
@@ -109,8 +145,9 @@ export function LearnSession() {
     setPracticeFacts(pf)
     setPracticeIndex(0)
     setCorrectCount(0)
+    resetCoachState()
     setStep('visual')
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (autoStarted.current || step !== 'pick' || !tableQuery) return
@@ -132,6 +169,11 @@ export function LearnSession() {
     if (!table) return
     const q = practiceFacts[practiceIndex]
     if (!q) return
+    // Clear inactivity timer on any answer
+    if (nudgeTimerRef.current !== null) {
+      window.clearTimeout(nudgeTimerRef.current)
+      nudgeTimerRef.current = null
+    }
     const ok = value === q.a * q.b
     const tm = useProgressStore.getState().tableMastery ?? {}
     const beforeM = getMasteryLevel(tm, table)
@@ -155,6 +197,11 @@ export function LearnSession() {
       setCorrectCount(nextCorrect)
     } else {
       setFeedback('soft')
+      setWrongAttempts((prev) => {
+        const next = prev + 1
+        if (next >= 2) setNudgeVisible(true)
+        return next
+      })
     }
     window.setTimeout(() => {
       setFeedback(null)
@@ -170,6 +217,25 @@ export function LearnSession() {
         setPracticeIndex((i) => i + 1)
       }
     }, 650)
+  }
+
+  function buildCoachHint(level: 1 | 2 | 3 | 4) {
+    const q = practiceFacts[practiceIndex]
+    if (!q) return null
+    return getCoachHint(
+      {
+        a: q.a,
+        b: q.b,
+        variant: 'standard',
+        wrongAttemptsOnCurrentQuestion,
+        masteryLevel: activeMasteryLevel ?? 0,
+        gameMode: 'learn',
+        advancedMode: false,
+        expertMode: false,
+      },
+      level,
+      coachLocale,
+    )
   }
 
   return (
@@ -278,26 +344,58 @@ export function LearnSession() {
       ) : null}
 
       {step === 'practice' && table ? (
-        <Card>
-          <div className="text-sm font-extrabold text-[var(--muted)]">{t('learn:stepPractice')}</div>
-          <div className="mt-3 text-center text-4xl font-extrabold">
-            {practiceFacts[practiceIndex]?.a} × {practiceFacts[practiceIndex]?.b} = ?
-          </div>
-          <div className="mt-2 text-center text-sm text-[var(--muted)]">{t('learn:question')}</div>
-          {feedback ? (
-            <div className="mt-3 text-center text-lg font-extrabold">
-              {feedback === 'ok' ? t('common:feedback.doingGreat') : t('common:feedback.tryAgain')}
+        <>
+          <Card>
+            <div className="text-sm font-extrabold text-[var(--muted)]">{t('learn:stepPractice')}</div>
+            <div className="mt-3 text-center text-4xl font-extrabold">
+              {practiceFacts[practiceIndex]?.a} × {practiceFacts[practiceIndex]?.b} = ?
             </div>
-          ) : null}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {options.map((n, idx) => (
-              <BigButton key={`${n}-${idx}`} variant="primary" onClick={() => pickAnswer(n)}>
-                {new Intl.NumberFormat(locale).format(n)}
+            <div className="mt-2 text-center text-sm text-[var(--muted)]">{t('learn:question')}</div>
+            {feedback ? (
+              <div className="mt-3 text-center text-lg font-extrabold">
+                {feedback === 'ok' ? t('common:feedback.doingGreat') : t('common:feedback.tryAgain')}
+              </div>
+            ) : null}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {options.map((n, idx) => (
+                <BigButton key={`${n}-${idx}`} variant="primary" onClick={() => pickAnswer(n)}>
+                  {new Intl.NumberFormat(locale).format(n)}
+                </BigButton>
+              ))}
+            </div>
+            {nudgeVisible && !coachVisible ? (
+              <div className="mt-3 text-center text-sm text-[var(--muted)]">
+                {t('learn:coach.nudge')}
+              </div>
+            ) : null}
+            <div className="mt-2">
+              <BigButton
+                variant="ghost"
+                onClick={() => {
+                  setCurrentHintLevel(1)
+                  setCoachVisible(true)
+                  setNudgeVisible(false)
+                }}
+              >
+                {t('learn:coach.help')}
               </BigButton>
-            ))}
-          </div>
-          <div className="mt-3 text-center text-xs text-[var(--muted)]">{t('learn:hint')}</div>
-        </Card>
+            </div>
+            <div className="mt-1 text-center text-xs text-[var(--muted)]">{t('learn:hint')}</div>
+          </Card>
+          {coachVisible && currentHintLevel ? (() => {
+            const hint = buildCoachHint(currentHintLevel)
+            if (!hint) return null
+            return (
+              <CoachHintCard
+                hint={hint}
+                onNextHint={() =>
+                  setCurrentHintLevel((l) => (l !== null && l < 4 ? ((l + 1) as 1 | 2 | 3 | 4) : l))
+                }
+                onClose={() => setCoachVisible(false)}
+              />
+            )
+          })() : null}
+        </>
       ) : null}
 
       {step === 'done' ? (

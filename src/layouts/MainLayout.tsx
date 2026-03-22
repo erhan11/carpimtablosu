@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import pkg from '../../package.json'
 
 export function MainLayout({
   title,
@@ -35,6 +36,9 @@ export function MainLayout({
         ) : null}
       </header>
       <main className="flex-1">{children}</main>
+      <footer className="mt-4 text-center text-[10px] text-[var(--muted)] opacity-40">
+        v{pkg.version}
+      </footer>
     </div>
   )
 }
