@@ -1,0 +1,56 @@
+{
+  "greeting": "Merhaba!",
+  "tagline": "Bugün küçük bir adım atalım.",
+  "cards": {
+    "todayGame": "Bugünkü oyun",
+    "todayGameHint": "Hazır oyunlar",
+    "learn": "Öğren",
+    "learnHint": "Görsel anlatım",
+    "learned": "Öğrendiğim çarpımlar",
+    "learnedHint": "{{count}} çarpım",
+    "badges": "Rozetlerim",
+    "badgesHint": "Ödüller",
+    "parent": "Ebeveyn alanı",
+    "parentHint": "İlerleme",
+    "review": "Tekrar zamanı",
+    "reviewHint": "Zorlandıkların",
+    "daily": "Günlük görev",
+    "dailyHint": "Bugünün mini hedefi"
+  },
+  "stats": {
+    "streak": "Seri: {{n}} gün",
+    "coins": "Madeni para: {{n}}",
+    "stars": "Yıldız: {{n}}"
+  },
+  "games": {
+    "title": "Oyunlar",
+    "pick": "Bir oyun seç"
+  },
+  "weeklyPlan": {
+    "currentWeek": "{{total}} haftanın {{current}}. haftası",
+    "thisWeekFocus": "Bu hafta: {{tables}}"
+  },
+  "dailyQuest": {
+    "title": "Günlük görev",
+    "task": "{{table}} tablosundan {{n}} doğru cevap",
+    "reviewYesterday": "Dün öğrendiklerini tekrar et ({{n}} doğru)",
+    "noYesterdayData": "Bugün genel görev: dün kayıt yok.",
+    "progress": "{{current}} / {{target}}",
+    "complete": "Tamamlandı!",
+    "rewardHint": "Bitirince ekstra yıldız ve madeni para."
+  },
+  "badges": {
+    "title": "Rozetler",
+    "streak3": "3 gün seri",
+    "streak7": "7 gün seri",
+    "coins50": "50 madeni para",
+    "tables4": "4 tablo açıldı",
+    "facts30": "30 çarpım",
+    "locked": "Kilitli"
+  },
+  "review": {
+    "title": "Tekrar zamanı",
+    "empty": "Şimdilik tekrar listesi boş.",
+    "hint": "Yanlış yapılanlar buraya düşer."
+  }
+}

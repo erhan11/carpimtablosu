@@ -1,0 +1,56 @@
+{
+  "greeting": "Hi there!",
+  "tagline": "Let’s take a small step today.",
+  "cards": {
+    "todayGame": "Today’s game",
+    "todayGameHint": "Ready games",
+    "learn": "Learn",
+    "learnHint": "Visual story",
+    "learned": "Facts I know",
+    "learnedHint": "{{count}} facts",
+    "badges": "My badges",
+    "badgesHint": "Rewards",
+    "parent": "Grown-ups",
+    "parentHint": "Progress",
+    "review": "Review time",
+    "reviewHint": "Tricky ones",
+    "daily": "Daily quest",
+    "dailyHint": "Today’s tiny goal"
+  },
+  "stats": {
+    "streak": "Streak: {{n}} days",
+    "coins": "Coins: {{n}}",
+    "stars": "Stars: {{n}}"
+  },
+  "games": {
+    "title": "Games",
+    "pick": "Pick a game"
+  },
+  "weeklyPlan": {
+    "currentWeek": "Week {{current}} of {{total}}",
+    "thisWeekFocus": "This week: {{tables}}"
+  },
+  "dailyQuest": {
+    "title": "Daily quest",
+    "task": "{{n}} correct answers from the {{table}} table",
+    "reviewYesterday": "Review what you learned yesterday ({{n}} correct)",
+    "noYesterdayData": "Today’s general quest — no history from yesterday yet.",
+    "progress": "{{current}} / {{target}}",
+    "complete": "Done!",
+    "rewardHint": "Finish for bonus stars and coins."
+  },
+  "badges": {
+    "title": "Badges",
+    "streak3": "3-day streak",
+    "streak7": "7-day streak",
+    "coins50": "50 coins",
+    "tables4": "4 tables unlocked",
+    "facts30": "30 facts",
+    "locked": "Locked"
+  },
+  "review": {
+    "title": "Review time",
+    "empty": "Nothing to review yet.",
+    "hint": "Tricky facts show up here."
+  }
+}

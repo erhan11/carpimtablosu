@@ -1,0 +1,37 @@
+{
+  "appName": "Times Tables",
+  "back": "Back",
+  "continue": "Continue",
+  "start": "Start",
+  "done": "Done",
+  "close": "Close",
+  "yes": "Yes",
+  "no": "No",
+  "loading": "Loading…",
+  "language": {
+    "title": "Choose language",
+    "subtitle": "Pick a language, then let’s play.",
+    "tr": "Türkçe",
+    "en": "English"
+  },
+  "feedback": {
+    "greatTry": "Great try",
+    "tryAgain": "Let’s try again",
+    "doingGreat": "You’re doing great",
+    "yay": "Yay!",
+    "almost": "So close",
+    "nice": "Nice work"
+  },
+  "celebration": {
+    "title": "Awesome!",
+    "subtitle": "A tiny celebration"
+  },
+  "numbers": {
+    "unitStars": "stars",
+    "unitCoins": "coins",
+    "level": "Level {{n}}"
+  },
+  "accessibility": {
+    "tapToChoose": "Tap to choose"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "title": "Grown-ups",
+  "intro": "A simple view of progress.",
+  "stats": {
+    "learned": "Facts practiced",
+    "weak": "Needs practice",
+    "minutes": "Today’s time (approx.)",
+    "ratio": "Correct / wrong",
+    "accuracy": "Accuracy: {{rate}} %"
+  },
+  "chart": {
+    "title": "Last 7 days",
+    "minutes": "Minutes",
+    "answers": "Answers"
+  },
+  "tips": {
+    "title": "Gentle tips",
+    "a": "Short sessions: 5–10 minutes is plenty.",
+    "b": "Mistakes are normal — games help them stick.",
+    "c": "A tiny step each day adds up fast."
+  },
+  "empty": "No data yet.",
+  "weakList": "{{list}}"
+}

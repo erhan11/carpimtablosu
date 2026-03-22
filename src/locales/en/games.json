@@ -1,0 +1,47 @@
+{
+  "hub": {
+    "title": "Games",
+    "subtitle": "Pick one"
+  },
+  "shell": {
+    "exit": "Exit",
+    "next": "Next question",
+    "score": "Score: {{n}}"
+  },
+  "balloon": {
+    "title": "Balloon pop",
+    "subtitle": "Pick the right answer",
+    "pick": "Which balloon is correct?"
+  },
+  "match": {
+    "title": "Match",
+    "subtitle": "Match pairs",
+    "tapFirst": "Tap an expression",
+    "tapSecond": "Now tap its answer",
+    "matched": "Matched!"
+  },
+  "memory": {
+    "title": "Memory",
+    "subtitle": "Flip cards, find pairs",
+    "found": "You found it!"
+  },
+  "sprint": {
+    "title": "Mini sprint",
+    "subtitle": "Build a streak, earn stars",
+    "streak": "Streak: {{n}}",
+    "noTimer": "No timer — take your time."
+  },
+  "boss": {
+    "title": "Boss level",
+    "subtitle": "Mixed questions",
+    "progress": "Question {{current}} / {{total}}",
+    "complete": "Level complete!"
+  },
+  "modes": {
+    "balloon": "Balloon",
+    "match": "Match",
+    "memory": "Memory",
+    "sprint": "Sprint",
+    "boss": "Boss"
+  }
+}

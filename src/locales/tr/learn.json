@@ -1,0 +1,12 @@
+{
+  "title": "Öğrenme",
+  "pickTable": "Bir tablo seç",
+  "locked": "Kilitli",
+  "stepVisual": "Gruplar",
+  "stepVisualDesc": "{{a}} grup, her grupta {{b}} tane.",
+  "stepPractice": "Mini alıştırma",
+  "question": "Kaç tane?",
+  "hint": "İstersen gruplara tekrar bak.",
+  "finish": "Bu tabloyu bitirdim",
+  "tableLabel": "{{n}}’ler"
+}

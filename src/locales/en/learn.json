@@ -1,0 +1,12 @@
+{
+  "title": "Learn",
+  "pickTable": "Pick a table",
+  "locked": "Locked",
+  "stepVisual": "Groups",
+  "stepVisualDesc": "{{a}} groups, {{b}} in each group.",
+  "stepPractice": "Tiny practice",
+  "question": "How many?",
+  "hint": "Peek at the groups again if you want.",
+  "finish": "I finished this table",
+  "tableLabel": "Times {{n}}"
+}

@@ -1,0 +1,10 @@
+{
+  "title": "Ayarlar",
+  "language": "Dil",
+  "sound": "Ses",
+  "soundOn": "Açık",
+  "soundOff": "Kapalı",
+  "reset": "İlerlemeyi sıfırla",
+  "resetConfirm": "Tüm yıldızlar ve ilerleme sıfırlansın mı? Bu işlem geri alınamaz.",
+  "resetDone": "Sıfırlandı"
+}

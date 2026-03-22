@@ -1,0 +1,37 @@
+{
+  "appName": "Çarpım Tablosu",
+  "back": "Geri",
+  "continue": "Devam",
+  "start": "Başla",
+  "done": "Bitti",
+  "close": "Kapat",
+  "yes": "Evet",
+  "no": "Hayır",
+  "loading": "Yükleniyor…",
+  "language": {
+    "title": "Dil seç",
+    "subtitle": "Bir dil seç, sonra oyuna başlayalım.",
+    "tr": "Türkçe",
+    "en": "English"
+  },
+  "feedback": {
+    "greatTry": "Harika deneme",
+    "tryAgain": "Bir daha bakalım",
+    "doingGreat": "Süper gidiyorsun",
+    "yay": "Yaşasın!",
+    "almost": "Çok yakın",
+    "nice": "Harika"
+  },
+  "celebration": {
+    "title": "Süper!",
+    "subtitle": "Küçük bir kutlama"
+  },
+  "numbers": {
+    "unitStars": "yıldız",
+    "unitCoins": "madeni para",
+    "level": "Seviye {{n}}"
+  },
+  "accessibility": {
+    "tapToChoose": "Seçmek için dokun"
+  }
+}

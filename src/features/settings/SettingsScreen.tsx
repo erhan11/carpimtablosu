@@ -1,0 +1,75 @@
+import { useTranslation } from 'react-i18next'
+import { BigButton } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { MainLayout } from '@/layouts/MainLayout'
+import { setAppLocale } from '@/lib/i18n'
+import { useProgressStore } from '@/lib/progress/store'
+
+export function SettingsScreen() {
+  const { t } = useTranslation('settings')
+  const locale = useProgressStore((s) => s.locale)
+  const setLocale = useProgressStore((s) => s.setLocale)
+  const soundEnabled = useProgressStore((s) => s.soundEnabled !== false)
+  const setSoundEnabled = useProgressStore((s) => s.setSoundEnabled)
+  const reset = useProgressStore((s) => s.resetProgress)
+
+  return (
+    <MainLayout title={t('title')}>
+      <div className="flex flex-col gap-4">
+        <Card>
+          <div className="text-sm font-bold text-[var(--muted)]">{t('sound')}</div>
+          <div className="mt-3">
+            <BigButton
+              variant={soundEnabled ? 'primary' : 'ghost'}
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              aria-pressed={soundEnabled}
+            >
+              {soundEnabled ? t('soundOn') : t('soundOff')}
+            </BigButton>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="text-sm font-bold text-[var(--muted)]">{t('language')}</div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <BigButton
+              variant={locale === 'tr' ? 'primary' : 'ghost'}
+              onClick={() => {
+                setLocale('tr')
+                setAppLocale('tr')
+              }}
+            >
+              Türkçe
+            </BigButton>
+            <BigButton
+              variant={locale === 'en' ? 'primary' : 'ghost'}
+              onClick={() => {
+                setLocale('en')
+                setAppLocale('en')
+              }}
+            >
+              English
+            </BigButton>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="text-sm font-bold text-[var(--muted)]">{t('reset')}</div>
+          <p className="mt-2 text-sm text-[var(--muted)]">{t('resetConfirm')}</p>
+          <div className="mt-3">
+            <BigButton
+              variant="ghost"
+              onClick={() => {
+                if (window.confirm(t('resetConfirm'))) {
+                  reset()
+                }
+              }}
+            >
+              {t('reset')}
+            </BigButton>
+          </div>
+        </Card>
+      </div>
+    </MainLayout>
+  )
+}

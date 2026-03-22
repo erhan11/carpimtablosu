@@ -1,0 +1,24 @@
+{
+  "title": "Ebeveyn alanı",
+  "intro": "Burada sadece ilerlemeyi görürsün.",
+  "stats": {
+    "learned": "Öğrenilen çarpımlar",
+    "weak": "Zorlanılanlar",
+    "minutes": "Bugünkü süre (yaklaşık)",
+    "ratio": "Doğru / yanlış",
+    "accuracy": "Doğruluk: {{rate}} %"
+  },
+  "chart": {
+    "title": "Son 7 gün",
+    "minutes": "Dakika",
+    "answers": "Cevaplar"
+  },
+  "tips": {
+    "title": "Kısa öneriler",
+    "a": "Kısa seanslar: 5–10 dakika yeter.",
+    "b": "Yanlışta nazik kalın; tekrar oyunla pekişir.",
+    "c": "Her gün küçük bir adım büyük fark yaratır."
+  },
+  "empty": "Henüz veri yok.",
+  "weakList": "{{list}}"
+}

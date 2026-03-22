@@ -1,0 +1,10 @@
+{
+  "title": "Settings",
+  "language": "Language",
+  "sound": "Sound",
+  "soundOn": "On",
+  "soundOff": "Off",
+  "reset": "Reset progress",
+  "resetConfirm": "Reset all stars and progress? This cannot be undone.",
+  "resetDone": "Reset complete"
+}

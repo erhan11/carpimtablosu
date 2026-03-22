@@ -1,0 +1,47 @@
+{
+  "hub": {
+    "title": "Oyunlar",
+    "subtitle": "Birini seç"
+  },
+  "shell": {
+    "exit": "Çık",
+    "next": "Sonraki soru",
+    "score": "Skor: {{n}}"
+  },
+  "balloon": {
+    "title": "Balon patlatma",
+    "subtitle": "Doğru cevabı seç",
+    "pick": "Doğru balon hangisi?"
+  },
+  "match": {
+    "title": "Eşleştirme",
+    "subtitle": "İşlemi sonuçla eşleştir",
+    "tapFirst": "Önce bir işlem seç",
+    "tapSecond": "Şimdi sonuç seç",
+    "matched": "Eşleşti!"
+  },
+  "memory": {
+    "title": "Hafıza",
+    "subtitle": "Kartları aç, çiftleri bul",
+    "found": "Buldun!"
+  },
+  "sprint": {
+    "title": "Mini yarış",
+    "subtitle": "Seri yap, yıldız topla",
+    "streak": "Seri: {{n}}",
+    "noTimer": "Süre yok; acele etme."
+  },
+  "boss": {
+    "title": "Boss seviye",
+    "subtitle": "Karışık sorular",
+    "progress": "Soru {{current}} / {{total}}",
+    "complete": "Bölüm bitti!"
+  },
+  "modes": {
+    "balloon": "Balon",
+    "match": "Eşleştir",
+    "memory": "Hafıza",
+    "sprint": "Mini yarış",
+    "boss": "Boss"
+  }
+}
