@@ -17,5 +17,14 @@
     "learning": "Öğreniyor",
     "strong": "Güçlü",
     "master": "Usta"
+  },
+  "coach": {
+    "title": "Küçük bir ipucu",
+    "nudge": "İpucu ister misin?",
+    "help": "Yardım",
+    "nextHint": "Bir ipucu daha",
+    "showAnswer": "Cevabı göster",
+    "close": "Kapat",
+    "genericHint": "Küçük parçalara bakalım."
   }
 }

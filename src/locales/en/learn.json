@@ -17,5 +17,14 @@
     "learning": "Learning",
     "strong": "Strong",
     "master": "Master"
+  },
+  "coach": {
+    "title": "A little help",
+    "nudge": "Want a hint?",
+    "help": "Help",
+    "nextHint": "One more hint",
+    "showAnswer": "Show answer",
+    "close": "Close",
+    "genericHint": "Let's break it into small parts."
   }
 }
