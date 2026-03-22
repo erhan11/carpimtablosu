@@ -40,6 +40,8 @@ export function SpeedGame() {
   const questionShownAt = useRef<number>(0)
   const endedRef = useRef(false)
   const [roundBaselineBest, setRoundBaselineBest] = useState(0)
+  /** Stable per question — do not tie list keys to `remainMs` (timer ticks remount buttons and can drop clicks). */
+  const [questionKey, setQuestionKey] = useState(0)
 
   const pushQuestion = useCallback(() => {
     const g = pickGameQuestion(unlocked, weak, { advancedMode, difficultyScale })
@@ -48,6 +50,7 @@ export function SpeedGame() {
     const ca = correctAnswerFor(g)
     const wrong = wrongAnswersForGame(g, 3)
     setChoices(shuffleInPlace([ca, ...wrong]))
+    setQuestionKey((k) => k + 1)
   }, [unlocked, weak, advancedMode, difficultyScale])
 
   useEffect(() => {
@@ -135,7 +138,7 @@ export function SpeedGame() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             {choices.map((n) => (
               <BigButton
-                key={`${prompt}-${n}-${remainMs}`}
+                key={`${questionKey}-${n}`}
                 variant="primary"
                 onClick={() => {
                   pick(n)
