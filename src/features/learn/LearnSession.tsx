@@ -18,8 +18,16 @@ import {
   getPlanWeekRow,
 } from '@/lib/plan/programWeek'
 import { shuffleInPlace } from '@/lib/math/shuffle'
+import {
+  getMasteryLevel,
+  masteryStarsCompact,
+  masteryStarsPadded,
+} from '@/lib/learn/masteryDisplay'
 import { useProgressStore } from '@/lib/progress/store'
+import { playReward } from '@/services/sound'
 import { toTableId, type TableId } from '@/types/progress'
+
+const MASTERY_LABEL_ORDER = ['starting', 'learning', 'strong', 'master'] as const
 
 type Step = 'pick' | 'visual' | 'practice' | 'done'
 
@@ -29,6 +37,7 @@ export function LearnSession() {
   const tableQuery = searchParams.get('table')
   const programStartDate = useProgressStore((s) => s.programStartDate)
   const unlocked = useProgressStore((s) => s.unlockedTableIds)
+  const tableMastery = useProgressStore((s) => s.tableMastery)
   const unlockNext = useProgressStore((s) => s.unlockNextTable)
   const recordAnswer = useProgressStore((s) => s.recordAnswer)
 
@@ -48,8 +57,24 @@ export function LearnSession() {
   const [correctCount, setCorrectCount] = useState(0)
   const [showParty, setShowParty] = useState(false)
   const [options, setOptions] = useState<number[]>([])
+  const [masteryToast, setMasteryToast] = useState<string | null>(null)
 
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
+  const masteryToastClearRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+
+  const showMasteryStrip = table != null && step !== 'pick'
+  const activeMasteryLevel = useMemo(() => {
+    if (!showMasteryStrip || table == null) return null
+    return getMasteryLevel(tableMastery ?? {}, table)
+  }, [showMasteryStrip, table, tableMastery])
+
+  useEffect(() => {
+    return () => {
+      if (masteryToastClearRef.current !== null) {
+        window.clearTimeout(masteryToastClearRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const q = practiceFacts[practiceIndex]
@@ -70,6 +95,11 @@ export function LearnSession() {
   const autoStarted = useRef(false)
 
   const startTable = useCallback((n: number) => {
+    setMasteryToast(null)
+    if (masteryToastClearRef.current !== null) {
+      window.clearTimeout(masteryToastClearRef.current)
+      masteryToastClearRef.current = null
+    }
     setTable(n)
     const facts = allFactsForTable(n)
     const smallEnough = facts.filter((f) => f.a * f.b <= 36)
@@ -103,7 +133,21 @@ export function LearnSession() {
     const q = practiceFacts[practiceIndex]
     if (!q) return
     const ok = value === q.a * q.b
+    const beforeM = getMasteryLevel(useProgressStore.getState().tableMastery, table)
     recordAnswer({ gameId: 'learn', question: q, correct: ok })
+    const afterM = getMasteryLevel(useProgressStore.getState().tableMastery, table)
+    if (afterM > beforeM) {
+      const label = t('learn:tableLabel', { n: table })
+      setMasteryToast(t('learn:masteryLevelUp', { label }))
+      if (masteryToastClearRef.current !== null) {
+        window.clearTimeout(masteryToastClearRef.current)
+      }
+      masteryToastClearRef.current = window.setTimeout(() => {
+        setMasteryToast(null)
+        masteryToastClearRef.current = null
+      }, 3200)
+      window.setTimeout(() => playReward(), 160)
+    }
     const nextCorrect = correctCount + (ok ? 1 : 0)
     if (ok) {
       setFeedback('ok')
@@ -131,16 +175,60 @@ export function LearnSession() {
     <MainLayout title={t('learn:title')} showBackTo="/">
       <Celebration show={showParty} />
 
+      {showMasteryStrip && activeMasteryLevel !== null ? (
+        <div className="mb-3 rounded-2xl border border-black/5 bg-white/90 px-3 py-2.5 shadow-sm">
+          {activeMasteryLevel === 0 ? (
+            <div className="text-sm font-extrabold text-[var(--ink)]">
+              {t('learn:mastery')}: {t('learn:masteryStarting')}
+            </div>
+          ) : (
+            <>
+              <div className="text-sm font-extrabold text-[var(--ink)]">
+                {t('learn:mastery')}: {masteryStarsPadded(activeMasteryLevel)}
+              </div>
+              <div className="mt-0.5 text-xs text-[var(--muted)]">
+                {t(
+                  `learn:masteryLabels.${
+                    MASTERY_LABEL_ORDER[activeMasteryLevel]
+                  }`,
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {masteryToast ? (
+        <div
+          className="pointer-events-none fixed bottom-24 left-4 right-4 z-40 mx-auto max-w-md rounded-2xl border border-[var(--success)]/30 bg-[var(--success)]/15 px-4 py-3 text-center text-sm font-extrabold text-[var(--ink)] shadow-md"
+          role="status"
+        >
+          {masteryToast}
+        </div>
+      ) : null}
+
       {step === 'pick' ? (
         <div className="grid grid-cols-2 gap-3">
           {unlocked.map((id: TableId) => {
             const n = parseTableId(id)
             const mark = focusSet.has(n) ? '⭐ ' : ''
+            const m = getMasteryLevel(tableMastery ?? {}, n)
+            const stars = masteryStarsCompact(m)
             return (
-              <BigButton key={id} variant="accent" onClick={() => startTable(n)}>
-                {mark}
-                {t('learn:tableLabel', { n })}
-              </BigButton>
+              <div key={id} className="flex flex-col gap-1">
+                <BigButton variant="accent" onClick={() => startTable(n)}>
+                  {mark}
+                  {t('learn:tableLabel', { n })}
+                </BigButton>
+                {stars ? (
+                  <div
+                    className="text-center text-xs leading-none tracking-tight text-[var(--muted)]"
+                    aria-hidden
+                  >
+                    {stars}
+                  </div>
+                ) : null}
+              </div>
             )
           })}
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {

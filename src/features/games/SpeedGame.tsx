@@ -134,7 +134,13 @@ export function SpeedGame() {
           <div className="mt-4 text-center text-4xl font-extrabold tabular-nums">{prompt}</div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             {choices.map((n) => (
-              <BigButton key={`${prompt}-${n}-${remainMs}`} variant="primary" onClick={() => pick(n)}>
+              <BigButton
+                key={`${prompt}-${n}-${remainMs}`}
+                variant="primary"
+                onClick={() => {
+                  pick(n)
+                }}
+              >
                 {new Intl.NumberFormat(locale).format(n)}
               </BigButton>
             ))}

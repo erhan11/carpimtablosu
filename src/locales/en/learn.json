@@ -8,5 +8,14 @@
   "question": "How many?",
   "hint": "Peek at the groups again if you want.",
   "finish": "I finished this table",
-  "tableLabel": "Times {{n}}"
+  "tableLabel": "Times {{n}}",
+  "mastery": "Mastery",
+  "masteryStarting": "Starting",
+  "masteryLevelUp": "New mastery level for {{label}}!",
+  "masteryLabels": {
+    "starting": "Starting",
+    "learning": "Learning",
+    "strong": "Strong",
+    "master": "Master"
+  }
 }

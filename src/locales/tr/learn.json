@@ -8,5 +8,14 @@
   "question": "Kaç tane?",
   "hint": "İstersen gruplara tekrar bak.",
   "finish": "Bu tabloyu bitirdim",
-  "tableLabel": "{{n}}’ler"
+  "tableLabel": "{{n}}’ler",
+  "mastery": "Ustalık",
+  "masteryStarting": "Başlıyor",
+  "masteryLevelUp": "{{label}} tablosunda yeni ustalık seviyesi!",
+  "masteryLabels": {
+    "starting": "Başlıyor",
+    "learning": "Öğreniyor",
+    "strong": "Güçlü",
+    "master": "Usta"
+  }
 }
