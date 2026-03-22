@@ -14,6 +14,7 @@ import { ProfileScreen } from '@/features/profile/ProfileScreen'
 import { ThemeSync } from '@/features/profile/ThemeSync'
 import { LearnSession } from '@/features/learn/LearnSession'
 import { LanguageSelect } from '@/features/onboarding/LanguageSelect'
+import { OnboardingFlow } from '@/features/onboarding/OnboardingFlow'
 import { ParentPanel } from '@/features/parent/ParentPanel'
 import { ReviewScreen } from '@/features/review/ReviewScreen'
 import { SettingsScreen } from '@/features/settings/SettingsScreen'
@@ -23,7 +24,8 @@ import { useProgressStore } from '@/lib/progress/store'
 
 function RouteShell() {
   const hydrated = useHydrated()
-  const done = useProgressStore((s) => s.hasCompletedLanguageSelect)
+  const languageDone = useProgressStore((s) => s.hasCompletedLanguageSelect)
+  const onboardingDone = useProgressStore((s) => s.hasCompletedOnboarding)
   const locale = useProgressStore((s) => s.locale)
   const location = useLocation()
 
@@ -39,11 +41,19 @@ function RouteShell() {
     )
   }
 
-  if (!done && location.pathname !== '/language') {
+  // Step 1: language gate
+  if (!languageDone && location.pathname !== '/language') {
     return <Navigate to="/language" replace />
   }
+  if (languageDone && location.pathname === '/language') {
+    return <Navigate to="/" replace />
+  }
 
-  if (done && location.pathname === '/language') {
+  // Step 2: onboarding gate (only after language is selected)
+  if (languageDone && !onboardingDone && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />
+  }
+  if (languageDone && onboardingDone && location.pathname === '/onboarding') {
     return <Navigate to="/" replace />
   }
 
@@ -60,6 +70,7 @@ export default function App() {
     <Routes>
       <Route element={<RouteShell />}>
         <Route path="/language" element={<LanguageSelect />} />
+        <Route path="/onboarding" element={<OnboardingFlow />} />
         <Route path="/" element={<HomeScreen />} />
         <Route path="/profile" element={<ProfileScreen />} />
         <Route path="/learn" element={<LearnSession />} />
