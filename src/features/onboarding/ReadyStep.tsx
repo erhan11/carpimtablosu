@@ -1,18 +1,10 @@
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { BigButton } from '@/components/ui/Button'
 
-const stepVariants = {
+const stepVariants: Variants = {
   initial: { opacity: 0, scale: 0.9 },
-  animate: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: 'backOut' } },
+  animate: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: [0.34, 1.56, 0.64, 1] } },
   exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } },
-}
-
-const starVariants = {
-  animate: {
-    rotate: [0, 15, -15, 10, -10, 0],
-    scale: [1, 1.2, 1],
-    transition: { duration: 0.6, delay: 0.3 },
-  },
 }
 
 export function ReadyStep({ onPlay }: { onPlay: () => void }) {
@@ -26,13 +18,15 @@ export function ReadyStep({ onPlay }: { onPlay: () => void }) {
     >
       <div className="flex flex-col items-center gap-3">
         <div className="flex gap-2 text-5xl">
-          <motion.span variants={starVariants} animate="animate">⭐</motion.span>
-          <motion.span variants={starVariants} animate="animate" transition={{ delay: 0.15 }}>
-            🎉
-          </motion.span>
-          <motion.span variants={starVariants} animate="animate" transition={{ delay: 0.3 }}>
-            ⭐
-          </motion.span>
+          {(['⭐', '🎉', '⭐'] as const).map((emoji, i) => (
+            <motion.span
+              key={i}
+              animate={{ rotate: [0, 15, -15, 10, -10, 0], scale: [1, 1.2, 1] }}
+              transition={{ duration: 0.6, delay: 0.3 + i * 0.15 }}
+            >
+              {emoji}
+            </motion.span>
+          ))}
         </div>
         <h1 className="text-4xl font-extrabold text-[var(--ink)]">Harika!</h1>
         <p className="text-2xl font-bold text-[var(--muted)]">Başlayalım 🚀</p>
