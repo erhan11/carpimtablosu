@@ -37,5 +37,11 @@
     "openProfile": "Open profile",
     "openSettings": "Open settings",
     "goBack": "Go back"
+  },
+  "difficulty": {
+    "easy": "Easy",
+    "normal": "Normal",
+    "hard": "Hard",
+    "expert": "Expert"
   }
 }

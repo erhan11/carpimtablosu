@@ -37,5 +37,11 @@
     "openProfile": "Profili aç",
     "openSettings": "Ayarları aç",
     "goBack": "Geri git"
+  },
+  "difficulty": {
+    "easy": "Kolay",
+    "normal": "Normal",
+    "hard": "Zor",
+    "expert": "Uzman"
   }
 }

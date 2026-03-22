@@ -144,6 +144,14 @@ export interface ProgressState {
   programStartDate?: string
   adaptive: AdaptiveState
   advancedMode: boolean
+  /** Higher layer: harder mix, timers, combos (see games). */
+  expertMode: boolean
+  expertTimerEnabled: boolean
+  expertTimerMs: number
+  /** Best consecutive correct streak seen in expert games (badges). */
+  expertBestCombo: number
+  /** Boss stages cleared while expert mode was on. */
+  expertBossWins: number
   advancedOfferDismissedDay?: string
   levelSkipOfferDismissedDay?: string
   tableMastery: Record<string, number>
@@ -166,6 +174,11 @@ export interface ProgressState {
   addBossBonusStars: (amount: number) => void
   unlockNextTable: () => void
   setAdvancedMode: (value: boolean) => void
+  setExpertMode: (value: boolean) => void
+  setExpertTimerEnabled: (value: boolean) => void
+  awardBonusCoins: (amount: number) => void
+  recordExpertComboPeak: (combo: number) => void
+  registerExpertBossClear: () => void
   dismissAdvancedOffer: () => void
   dismissLevelSkipOffer: () => void
   unlockFastTrack: () => void
@@ -215,6 +228,11 @@ const dataDefaults = () => ({
     lastAdaptiveGameAt: undefined,
   },
   advancedMode: false,
+  expertMode: false,
+  expertTimerEnabled: true,
+  expertTimerMs: 5000,
+  expertBestCombo: 0,
+  expertBossWins: 0,
   advancedOfferDismissedDay: undefined,
   levelSkipOfferDismissedDay: undefined,
   tableMastery: {} as Record<string, number>,
@@ -292,10 +310,12 @@ export const useProgressStore = create<ProgressState>()(
             perfBuf.push({ correct, ms: responseMs })
             while (perfBuf.length > 50) perfBuf.shift()
           }
+          const expertOn = state.expertMode === true
           if (correct && responseMs !== undefined && responseMs < 2500) {
             difficultyScale = Math.min(1.28, difficultyScale + 0.02)
           } else if (!correct) {
-            difficultyScale = Math.max(0.72, difficultyScale - 0.05)
+            const dec = expertOn ? 0.08 : 0.05
+            difficultyScale = Math.max(0.72, difficultyScale - dec)
           }
           let tableMastery = { ...state.tableMastery }
           let tableStats = { ...state.tableStats }
@@ -495,6 +515,35 @@ export const useProgressStore = create<ProgressState>()(
         set({ advancedMode: value })
       },
 
+      setExpertMode: (value) => {
+        set({ expertMode: value })
+      },
+
+      setExpertTimerEnabled: (value) => {
+        set({ expertTimerEnabled: value })
+      },
+
+      awardBonusCoins: (amount) => {
+        const n = Math.max(0, Math.floor(amount))
+        if (n <= 0) return
+        set((s) => ({ coins: s.coins + n }))
+        get().maybeAwardBadges()
+      },
+
+      recordExpertComboPeak: (combo) => {
+        const v = Math.max(0, Math.floor(combo))
+        if (v <= 0) return
+        set((s) => ({
+          expertBestCombo: Math.max(s.expertBestCombo ?? 0, v),
+        }))
+        get().maybeAwardBadges()
+      },
+
+      registerExpertBossClear: () => {
+        set((s) => ({ expertBossWins: (s.expertBossWins ?? 0) + 1 }))
+        get().maybeAwardBadges()
+      },
+
       dismissAdvancedOffer: () => {
         set({ advancedOfferDismissedDay: getLocalDay() })
       },
@@ -542,6 +591,10 @@ export const useProgressStore = create<ProgressState>()(
           if (masteryVals.length >= 5 && masteryVals.filter((m) => m >= 3).length >= 3) {
             earned.add('crownTables')
           }
+          if ((state.expertBestCombo ?? 0) >= 10) earned.add('expertLightning')
+          if ((state.expertBossWins ?? 0) >= 1) earned.add('expertChampion')
+          if ((state.expertBossWins ?? 0) >= 5) earned.add('expertMaster')
+          if ((state.expertBossWins ?? 0) >= 10) earned.add('expertLegend')
           return { ...state, earnedBadges: [...earned] }
         })
       },
@@ -606,6 +659,21 @@ export const useProgressStore = create<ProgressState>()(
               })
           : c.practiceByDay
         merged.advancedMode = typeof p.advancedMode === 'boolean' ? p.advancedMode : c.advancedMode
+        merged.expertMode = typeof p.expertMode === 'boolean' ? p.expertMode : c.expertMode
+        merged.expertTimerEnabled =
+          typeof p.expertTimerEnabled === 'boolean' ? p.expertTimerEnabled : c.expertTimerEnabled
+        merged.expertTimerMs =
+          typeof p.expertTimerMs === 'number' && Number.isFinite(p.expertTimerMs)
+            ? Math.min(12000, Math.max(3000, Math.floor(p.expertTimerMs)))
+            : c.expertTimerMs
+        merged.expertBestCombo =
+          typeof p.expertBestCombo === 'number' && Number.isFinite(p.expertBestCombo)
+            ? Math.max(0, Math.floor(p.expertBestCombo))
+            : c.expertBestCombo
+        merged.expertBossWins =
+          typeof p.expertBossWins === 'number' && Number.isFinite(p.expertBossWins)
+            ? Math.max(0, Math.floor(p.expertBossWins))
+            : c.expertBossWins
         merged.advancedOfferDismissedDay =
           typeof p.advancedOfferDismissedDay === 'string'
             ? p.advancedOfferDismissedDay
@@ -672,6 +740,11 @@ export const useProgressStore = create<ProgressState>()(
         programStartDate: s.programStartDate,
         adaptive: s.adaptive,
         advancedMode: s.advancedMode,
+        expertMode: s.expertMode,
+        expertTimerEnabled: s.expertTimerEnabled,
+        expertTimerMs: s.expertTimerMs,
+        expertBestCombo: s.expertBestCombo,
+        expertBossWins: s.expertBossWins,
         advancedOfferDismissedDay: s.advancedOfferDismissedDay,
         levelSkipOfferDismissedDay: s.levelSkipOfferDismissedDay,
         tableMastery: s.tableMastery,

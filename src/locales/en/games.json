@@ -37,6 +37,16 @@
     "progress": "Question {{current}} / {{total}}",
     "complete": "Level complete!"
   },
+  "expert": {
+    "questionTime": "{{s}}s left",
+    "combo": "Combo ×{{n}}"
+  },
+  "mixed": {
+    "title": "Mixed challenge",
+    "subtitle": "Questions from every table — true mastery",
+    "progress": "Question {{current}} / {{total}}",
+    "complete": "Challenge complete!"
+  },
   "speed": {
     "title": "Speed challenge",
     "subtitle": "Answer as many as you can in one minute",
@@ -56,6 +66,7 @@
     "memory": "Memory",
     "sprint": "Sprint",
     "speed": "Speed",
-    "boss": "Boss"
+    "boss": "Boss",
+    "mixed": "Mixed"
   }
 }

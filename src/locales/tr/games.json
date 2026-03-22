@@ -25,6 +25,16 @@
     "subtitle": "Kartları aç, çiftleri bul",
     "found": "Buldun!"
   },
+  "expert": {
+    "questionTime": "{{s}} sn kaldı",
+    "combo": "Kombo ×{{n}}"
+  },
+  "mixed": {
+    "title": "Karışık meydan okuma",
+    "subtitle": "Tüm tablolardan sorular — gerçek ustalık",
+    "progress": "Soru {{current}} / {{total}}",
+    "complete": "Meydan okuma bitti!"
+  },
   "sprint": {
     "title": "Mini yarış",
     "subtitle": "Seri yap, yıldız topla",
@@ -56,6 +66,7 @@
     "memory": "Hafıza",
     "sprint": "Mini yarış",
     "speed": "Hız",
-    "boss": "Boss"
+    "boss": "Boss",
+    "mixed": "Karışık"
   }
 }

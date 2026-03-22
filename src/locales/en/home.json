@@ -24,6 +24,13 @@
     "title": "Games",
     "pick": "Pick a game"
   },
+  "bossCta": {
+    "title": "Boss challenge ready!",
+    "hint": "You reached a new milestone — try the Boss level."
+  },
+  "expert": {
+    "badge": "Expert"
+  },
   "weeklyPlan": {
     "currentWeek": "Week {{current}} of {{total}}",
     "thisWeekFocus": "This week: {{tables}}"
@@ -53,6 +60,10 @@
     "advanced": "Advanced path",
     "speedDemon": "Speed demon (12+ / min)",
     "crownTables": "Table master",
+    "expertLightning": "Lightning combo",
+    "expertChampion": "Boss champion",
+    "expertMaster": "Boss master",
+    "expertLegend": "Boss legend",
     "locked": "Locked"
   },
   "advanced": {

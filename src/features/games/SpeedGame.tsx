@@ -5,10 +5,11 @@ import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Celebration } from '@/components/ui/Celebration'
 import { MainLayout } from '@/layouts/MainLayout'
+import { getDifficultyTierKey } from '@/lib/difficulty/difficultyTier'
 import {
   correctAnswerFor,
   formatQuestionPrompt,
-  pickGameQuestion,
+  pickGameQuestionForSession,
   wrongAnswersForGame,
   type GameQuestion,
 } from '@/lib/math/advancedQuestions'
@@ -26,7 +27,10 @@ export function SpeedGame() {
   const recordAnswer = useProgressStore((s) => s.recordAnswer)
   const recordSpeedBest = useProgressStore((s) => s.recordSpeedBest)
   const advancedMode = useProgressStore((s) => s.advancedMode)
+  const expertMode = useProgressStore((s) => s.expertMode)
   const difficultyScale = useProgressStore((s) => s.difficultyScale ?? 1)
+  const awardBonusCoins = useProgressStore((s) => s.awardBonusCoins)
+  const recordExpertComboPeak = useProgressStore((s) => s.recordExpertComboPeak)
   const speedBestApm = useProgressStore((s) => s.speedBestApm ?? 0)
 
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
@@ -37,21 +41,26 @@ export function SpeedGame() {
   const [game, setGame] = useState<GameQuestion | null>(null)
   const [choices, setChoices] = useState<number[]>([])
   const [party, setParty] = useState(false)
+  const [streak, setStreak] = useState(0)
   const questionShownAt = useRef<number>(0)
   const endedRef = useRef(false)
   const [roundBaselineBest, setRoundBaselineBest] = useState(0)
-  /** Stable per question — do not tie list keys to `remainMs` (timer ticks remount buttons and can drop clicks). */
+  // Increments each new question; keep `remainMs` out of list keys (timer remounts can drop clicks).
   const [questionKey, setQuestionKey] = useState(0)
 
   const pushQuestion = useCallback(() => {
-    const g = pickGameQuestion(unlocked, weak, { advancedMode, difficultyScale })
+    const g = pickGameQuestionForSession(unlocked, weak, {
+      advancedMode,
+      expertMode,
+      difficultyScale,
+    })
     setGame(g)
     questionShownAt.current = responseClockMs()
     const ca = correctAnswerFor(g)
     const wrong = wrongAnswersForGame(g, 3)
     setChoices(shuffleInPlace([ca, ...wrong]))
     setQuestionKey((k) => k + 1)
-  }, [unlocked, weak, advancedMode, difficultyScale])
+  }, [unlocked, weak, advancedMode, expertMode, difficultyScale])
 
   useEffect(() => {
     if (phase !== 'play') return
@@ -82,6 +91,7 @@ export function SpeedGame() {
     setRoundBaselineBest(speedBestApm)
     setRemainMs(ROUND_SEC * 1000)
     setCorrectCount(0)
+    setStreak(0)
     endedRef.current = false
     setPhase('play')
     pushQuestion()
@@ -97,7 +107,21 @@ export function SpeedGame() {
       correct: ok,
       responseMs: ms,
     })
-    if (ok) setCorrectCount((c) => c + 1)
+    if (ok) {
+      setCorrectCount((c) => c + 1)
+      if (expertMode) {
+        setStreak((s) => {
+          const next = s + 1
+          recordExpertComboPeak(next)
+          if (next === 3) awardBonusCoins(2)
+          if (next === 5) awardBonusCoins(3)
+          if (next === 10) awardBonusCoins(5)
+          return next
+        })
+      }
+    } else {
+      setStreak(0)
+    }
     pushQuestion()
   }
 
@@ -105,8 +129,23 @@ export function SpeedGame() {
 
   const displayBest = Math.max(speedBestApm, phase === 'done' ? correctCount : 0)
 
+  const tierKey = getDifficultyTierKey({ advancedMode, expertMode, difficultyScale })
+  const difficultyBadge = (
+    <span className="rounded-full bg-black/5 px-2 py-1">{t(`common:difficulty.${tierKey}`)}</span>
+  )
+  const comboMult =
+    expertMode && streak >= 10
+      ? 5
+      : expertMode && streak >= 5
+        ? 3
+        : expertMode && streak >= 3
+          ? 2
+          : expertMode && streak > 0
+            ? 1
+            : 0
+
   return (
-    <MainLayout title={t('games:speed.title')} showBackTo="/games">
+    <MainLayout title={t('games:speed.title')} showBackTo="/games" headerRight={difficultyBadge}>
       <Celebration show={party} />
       <div className="text-sm text-[var(--muted)]">{t('games:speed.subtitle')}</div>
 
@@ -134,6 +173,11 @@ export function SpeedGame() {
             <span className="text-[var(--muted)]">{t('games:speed.score')}</span>
             <span>{correctCount}</span>
           </div>
+          {expertMode && comboMult >= 1 ? (
+            <div className="mt-2 text-center text-sm font-extrabold text-[var(--primary-dark)]">
+              {t('games:expert.combo', { n: comboMult })}
+            </div>
+          ) : null}
           <div className="mt-4 text-center text-4xl font-extrabold tabular-nums">{prompt}</div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             {choices.map((n) => (

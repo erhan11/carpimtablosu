@@ -24,6 +24,13 @@
     "title": "Oyunlar",
     "pick": "Bir oyun seç"
   },
+  "bossCta": {
+    "title": "Boss hazır!",
+    "hint": "Yeni bir kilometre taşına geldin — Boss seviyesini dene."
+  },
+  "expert": {
+    "badge": "Uzman"
+  },
   "weeklyPlan": {
     "currentWeek": "{{total}} haftanın {{current}}. haftası",
     "thisWeekFocus": "Bu hafta: {{tables}}"
@@ -53,6 +60,10 @@
     "advanced": "İleri yol",
     "speedDemon": "Hız canavarı (12+ / dk)",
     "crownTables": "Tablo ustası",
+    "expertLightning": "Şimşek kombo",
+    "expertChampion": "Boss şampiyonu",
+    "expertMaster": "Boss ustası",
+    "expertLegend": "Boss efsanesi",
     "locked": "Kilitli"
   },
   "advanced": {

@@ -12,6 +12,10 @@ const BADGES: { id: string; key: string; emoji: string }[] = [
   { id: 'advanced', key: 'advanced', emoji: '⚡' },
   { id: 'speedDemon', key: 'speedDemon', emoji: '⚡' },
   { id: 'crownTables', key: 'crownTables', emoji: '👑' },
+  { id: 'expertLightning', key: 'expertLightning', emoji: '⚡' },
+  { id: 'expertChampion', key: 'expertChampion', emoji: '🏆' },
+  { id: 'expertMaster', key: 'expertMaster', emoji: '🥇' },
+  { id: 'expertLegend', key: 'expertLegend', emoji: '👑' },
 ]
 
 export function BadgesScreen() {

@@ -14,6 +14,10 @@ export function SettingsScreen() {
   const reset = useProgressStore((s) => s.resetProgress)
   const advancedMode = useProgressStore((s) => s.advancedMode)
   const setAdvancedMode = useProgressStore((s) => s.setAdvancedMode)
+  const expertMode = useProgressStore((s) => s.expertMode)
+  const setExpertMode = useProgressStore((s) => s.setExpertMode)
+  const expertTimerEnabled = useProgressStore((s) => s.expertTimerEnabled !== false)
+  const setExpertTimerEnabled = useProgressStore((s) => s.setExpertTimerEnabled)
 
   return (
     <MainLayout title={t('title')}>
@@ -41,6 +45,35 @@ export function SettingsScreen() {
               aria-pressed={advancedMode}
             >
               {advancedMode ? t('advancedOn') : t('advancedOff')}
+            </BigButton>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="text-sm font-bold text-[var(--muted)]">{t('expert')}</div>
+          <p className="mt-2 text-sm text-[var(--muted)]">{t('expertHint')}</p>
+          <div className="mt-3">
+            <BigButton
+              variant={expertMode ? 'primary' : 'ghost'}
+              onClick={() => setExpertMode(!expertMode)}
+              aria-pressed={expertMode}
+            >
+              {expertMode ? t('expertOn') : t('expertOff')}
+            </BigButton>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="text-sm font-bold text-[var(--muted)]">{t('expertTimer')}</div>
+          <p className="mt-2 text-sm text-[var(--muted)]">{t('expertTimerHint')}</p>
+          <div className="mt-3">
+            <BigButton
+              variant={expertTimerEnabled ? 'primary' : 'ghost'}
+              onClick={() => setExpertTimerEnabled(!expertTimerEnabled)}
+              aria-pressed={expertTimerEnabled}
+              disabled={!expertMode}
+            >
+              {expertTimerEnabled ? t('expertTimerOn') : t('expertTimerOff')}
             </BigButton>
           </div>
         </Card>

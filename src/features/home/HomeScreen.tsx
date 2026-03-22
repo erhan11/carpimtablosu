@@ -49,6 +49,8 @@ export function HomeScreen() {
   const weakFacts = useProgressStore((s) => s.weakFacts)
   const adaptiveState = useProgressStore((s) => s.adaptive)
   const advancedMode = useProgressStore((s) => s.advancedMode)
+  const expertMode = useProgressStore((s) => s.expertMode)
+  const lastBossLevelCompleted = useProgressStore((s) => s.lastBossLevelCompleted)
   const performanceBuffer = useProgressStore((s) => s.performanceBuffer ?? [])
   const advancedOfferDismissedDay = useProgressStore((s) => s.advancedOfferDismissedDay)
   const levelSkipOfferDismissedDay = useProgressStore((s) => s.levelSkipOfferDismissedDay)
@@ -122,6 +124,11 @@ export function HomeScreen() {
     [levelSkipOfferDismissedDay, performanceBuffer],
   )
 
+  const showBossCta =
+    level > 0 &&
+    level % 5 === 0 &&
+    level > (lastBossLevelCompleted ?? 0)
+
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col gap-4 px-4 pb-10 pt-[max(16px,env(safe-area-inset-top))]">
       <header className="flex items-start justify-between gap-3">
@@ -170,6 +177,15 @@ export function HomeScreen() {
         <div className="mt-0.5 text-[var(--muted)]">{t('home:weeklyPlan.thisWeekFocus', { tables: focusListText })}</div>
       </div>
 
+      {showBossCta ? (
+        <Link to="/games/boss">
+          <Card className="active:scale-[0.99]">
+            <div className="text-lg font-extrabold">{t('home:bossCta.title')}</div>
+            <div className="mt-1 text-sm text-[var(--muted)]">{t('home:bossCta.hint')}</div>
+          </Card>
+        </Link>
+      ) : null}
+
       {offerAdvanced ? (
         <AdvancedModeModal
           kind="advanced"
@@ -199,6 +215,7 @@ export function HomeScreen() {
         {advancedMode ? (
           <StatPill emoji="⚡" label={t('home:advanced.badge')} />
         ) : null}
+        {expertMode ? <StatPill emoji="🎓" label={t('home:expert.badge')} /> : null}
         <StatPill emoji="🔥" label={t('home:stats.streak', { n: streak?.current ?? 0 })} />
         <StatPill
           emoji="🪙"

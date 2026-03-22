@@ -9,6 +9,7 @@ const modes = [
   { to: '/games/memory', key: 'memory', emoji: '🃏' },
   { to: '/games/sprint', key: 'sprint', emoji: '⚡' },
   { to: '/games/speed', key: 'speed', emoji: '🏃' },
+  { to: '/games/mixed', key: 'mixed', emoji: '🎯' },
   { to: '/games/boss', key: 'boss', emoji: '🐉' },
 ] as const
 

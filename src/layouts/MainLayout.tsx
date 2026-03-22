@@ -6,10 +6,13 @@ export function MainLayout({
   title,
   children,
   showBackTo = '/',
+  headerRight,
 }: {
   title?: string
   children: ReactNode
   showBackTo?: string
+  /** e.g. difficulty tier badge — keep small to avoid layout shift */
+  headerRight?: ReactNode
 }) {
   const { t } = useTranslation('common')
   return (
@@ -23,7 +26,12 @@ export function MainLayout({
           ← {t('back')}
         </Link>
         {title ? (
-          <h1 className="text-xl font-extrabold text-[var(--primary-dark)]">{title}</h1>
+          <h1 className="min-w-0 flex-1 text-xl font-extrabold text-[var(--primary-dark)]">{title}</h1>
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
+        {headerRight ? (
+          <div className="ml-auto shrink-0 text-xs font-extrabold text-[var(--muted)]">{headerRight}</div>
         ) : null}
       </header>
       <main className="flex-1">{children}</main>

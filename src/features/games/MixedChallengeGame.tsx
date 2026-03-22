@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { Celebration } from '@/components/ui/Celebration'
 import { MainLayout } from '@/layouts/MainLayout'
 import { getDifficultyTierKey } from '@/lib/difficulty/difficultyTier'
 import {
@@ -17,36 +16,33 @@ import { shuffleInPlace } from '@/lib/math/shuffle'
 import { responseClockMs } from '@/lib/perf'
 import { useProgressStore, useWeakKeys } from '@/lib/progress/store'
 
-export function BossGame() {
+const TOTAL = 10
+
+export function MixedChallengeGame() {
   const { t, i18n } = useTranslation(['games', 'common'])
   const navigate = useNavigate()
   const unlocked = useProgressStore((s) => s.unlockedTableIds)
   const weak = useWeakKeys()
   const recordAnswer = useProgressStore((s) => s.recordAnswer)
-  const addBossBonusStars = useProgressStore((s) => s.addBossBonusStars)
   const awardBonusCoins = useProgressStore((s) => s.awardBonusCoins)
   const recordExpertComboPeak = useProgressStore((s) => s.recordExpertComboPeak)
-  const registerExpertBossClear = useProgressStore((s) => s.registerExpertBossClear)
   const advancedMode = useProgressStore((s) => s.advancedMode)
   const expertMode = useProgressStore((s) => s.expertMode)
   const expertTimerEnabled = useProgressStore((s) => s.expertTimerEnabled !== false)
   const expertTimerMs = useProgressStore((s) => s.expertTimerMs ?? 5000)
   const difficultyScale = useProgressStore((s) => s.difficultyScale ?? 1)
-  const level = useProgressStore((s) => s.level)
-  const markBossCompletedAtLevel = useProgressStore((s) => s.markBossCompletedAtLevel)
-
-  const bossRewardedRef = useRef(false)
 
   const locale = i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US'
 
   const questions = useMemo(() => {
     const qs: GameQuestion[] = []
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < TOTAL; i += 1) {
       qs.push(
         pickGameQuestionForSession(unlocked, weak, {
           advancedMode,
           expertMode,
           difficultyScale,
+          mixedOnly: true,
         }),
       )
     }
@@ -54,9 +50,8 @@ export function BossGame() {
   }, [unlocked, weak, advancedMode, expertMode, difficultyScale])
 
   const [index, setIndex] = useState(0)
-  const [msg, setMsg] = useState<string | null>(null)
   const [done, setDone] = useState(false)
-  const [party, setParty] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
   const [streak, setStreak] = useState(0)
   const [timeLeft, setTimeLeft] = useState(0)
   const questionShownAt = useRef(0)
@@ -82,9 +77,7 @@ export function BossGame() {
     const correct = correctAnswerFor(game)
     const wrong = wrongAnswersForGame(game, 3)
     const next = shuffleInPlace([correct, ...wrong])
-    queueMicrotask(() => {
-      setChoices(next)
-    })
+    queueMicrotask(() => setChoices(next))
   }, [game])
 
   const applyComboRewards = useCallback(
@@ -98,34 +91,17 @@ export function BossGame() {
     [awardBonusCoins, expertMode, recordExpertComboPeak],
   )
 
-  const finishBoss = useCallback(() => {
-    if (bossRewardedRef.current) return
-    bossRewardedRef.current = true
-    const bonusStars = expertMode ? 8 : advancedMode ? 5 : level % 5 === 0 ? 4 : 2
-    addBossBonusStars(bonusStars)
-    if (expertMode) {
-      awardBonusCoins(20)
-      registerExpertBossClear()
-    }
-    markBossCompletedAtLevel(level)
-    setParty(true)
-    window.setTimeout(() => setParty(false), 1400)
-  }, [
-    addBossBonusStars,
-    advancedMode,
-    awardBonusCoins,
-    expertMode,
-    level,
-    markBossCompletedAtLevel,
-    registerExpertBossClear,
-  ])
+  const onComplete = useCallback(() => {
+    setDone(true)
+    awardBonusCoins(5)
+  }, [awardBonusCoins])
 
   const advanceOrComplete = useCallback(
     (ok: boolean) => {
       const g = gameRef.current
       if (!g) return
       const ms = Math.round(responseClockMs() - questionShownAt.current)
-      recordAnswer({ gameId: 'boss', question: g.base, correct: ok, responseMs: ms })
+      recordAnswer({ gameId: 'mixed', question: g.base, correct: ok, responseMs: ms })
       setMsg(ok ? t('common:feedback.doingGreat') : t('common:feedback.tryAgain'))
       if (ok) {
         setStreak((s) => {
@@ -138,15 +114,14 @@ export function BossGame() {
       }
       window.setTimeout(() => {
         setMsg(null)
-        if (index + 1 >= questions.length) {
-          setDone(true)
-          finishBoss()
+        if (index + 1 >= TOTAL) {
+          onComplete()
           return
         }
         setIndex((i) => i + 1)
       }, 550)
     },
-    [applyComboRewards, finishBoss, index, questions.length, recordAnswer, t],
+    [applyComboRewards, index, onComplete, recordAnswer, t],
   )
 
   const onTimeExpired = useCallback(() => {
@@ -155,7 +130,7 @@ export function BossGame() {
     const g = gameRef.current
     if (!g) return
     recordAnswer({
-      gameId: 'boss',
+      gameId: 'mixed',
       question: g.base,
       correct: false,
       responseMs: expertTimerMs,
@@ -164,14 +139,13 @@ export function BossGame() {
     setMsg(t('common:feedback.tryAgain'))
     window.setTimeout(() => {
       setMsg(null)
-      if (index + 1 >= questions.length) {
-        setDone(true)
-        finishBoss()
+      if (index + 1 >= TOTAL) {
+        onComplete()
         return
       }
       setIndex((i) => i + 1)
     }, 550)
-  }, [expertTimerMs, finishBoss, index, questions.length, recordAnswer, t])
+  }, [expertTimerMs, index, onComplete, recordAnswer, t])
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- per-question timer reset */
@@ -208,10 +182,8 @@ export function BossGame() {
     streak >= 10 ? 5 : streak >= 5 ? 3 : streak >= 3 ? 2 : expertMode && streak > 0 ? 1 : 0
 
   return (
-    <MainLayout title={t('games:boss.title')} showBackTo="/games" headerRight={difficultyBadge}>
-      <Celebration show={party} />
-
-      <div className="text-sm text-[var(--muted)]">{t('games:boss.subtitle')}</div>
+    <MainLayout title={t('games:mixed.title')} showBackTo="/games" headerRight={difficultyBadge}>
+      <div className="text-sm text-[var(--muted)]">{t('games:mixed.subtitle')}</div>
       {expertMode && expertTimerEnabled && !done ? (
         <div className="mt-2 text-sm font-extrabold text-[var(--muted)]">
           {t('games:expert.questionTime', { s: (timeLeft / 1000).toFixed(1) })}
@@ -221,8 +193,8 @@ export function BossGame() {
       <Card className="mt-4">
         <div className="text-center text-sm font-extrabold text-[var(--muted)]">
           {done
-            ? t('games:boss.complete')
-            : t('games:boss.progress', { current: index + 1, total: questions.length })}
+            ? t('games:mixed.complete')
+            : t('games:mixed.progress', { current: index + 1, total: TOTAL })}
         </div>
         {expertMode && comboMult >= 1 && !done ? (
           <div className="mt-2 text-center text-sm font-extrabold text-[var(--primary-dark)]">
@@ -237,14 +209,14 @@ export function BossGame() {
             ) : null}
             <div className="mt-4 grid grid-cols-2 gap-3">
               {choices.map((n) => (
-                <BigButton key={`${n}-${index}`} variant="accent" onClick={() => pick(n)}>
+                <BigButton key={`${n}-${index}`} variant="primary" onClick={() => pick(n)}>
                   {new Intl.NumberFormat(locale).format(n)}
                 </BigButton>
               ))}
             </div>
           </>
         ) : (
-          <div className="mt-4 text-center text-2xl font-extrabold">{t('games:boss.complete')}</div>
+          <div className="mt-4 text-center text-xl font-extrabold">{t('games:mixed.complete')}</div>
         )}
       </Card>
 

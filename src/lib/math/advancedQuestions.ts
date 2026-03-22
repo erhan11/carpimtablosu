@@ -45,6 +45,81 @@ export function pickMixedTableQuestion(unlockedTables: TableId[], weakKeys: stri
 }
 
 /** Weighted random variant for advanced / scaled difficulty. */
+/**
+ * Expert layer: 40% mixed tables, 30% reverse, 30% two-digit (MVP — no word problems).
+ * `mixedOnly`: Mixed Challenge route — heavy bias toward cross-table questions.
+ */
+export function pickExpertGameQuestion(
+  unlockedTables: TableId[],
+  weakKeys: string[],
+  opts: { difficultyScale: number; mixedOnly?: boolean },
+): GameQuestion {
+  if (opts.mixedOnly) {
+    const r = Math.random()
+    if (r < 0.7) {
+      const base = pickMixedTableQuestion(unlockedTables, weakKeys)
+      return { base, variant: 'standard' }
+    }
+    if (r < 0.9) {
+      const base = pickMixedTableQuestion(unlockedTables, weakKeys)
+      return Math.random() < 0.5
+        ? { base, variant: 'reverse_missing_a' }
+        : { base, variant: 'reverse_missing_b' }
+    }
+    const base = pickTwoDigitQuestion()
+    return { base, variant: base.a >= 11 ? 'twodigit' : 'standard' }
+  }
+
+  const r = Math.random()
+  if (r < 0.4) {
+    const base = pickMixedTableQuestion(unlockedTables, weakKeys)
+    return { base, variant: 'standard' }
+  }
+  if (r < 0.7) {
+    const base =
+      Math.random() < 0.5
+        ? pickMixedTableQuestion(unlockedTables, weakKeys)
+        : pickQuestion(unlockedTables, weakKeys)
+    return Math.random() < 0.5
+      ? { base, variant: 'reverse_missing_a' }
+      : { base, variant: 'reverse_missing_b' }
+  }
+  const base = pickTwoDigitQuestion()
+  return { base, variant: base.a >= 11 ? 'twodigit' : 'standard' }
+}
+
+/** Routes to expert distribution when `expertMode` is on; otherwise existing advanced logic. */
+export function pickGameQuestionForSession(
+  unlockedTables: TableId[],
+  weakKeys: string[],
+  opts: {
+    advancedMode: boolean
+    expertMode: boolean
+    difficultyScale: number
+    mixedOnly?: boolean
+  },
+): GameQuestion {
+  if (opts.mixedOnly) {
+    if (opts.expertMode) {
+      return pickExpertGameQuestion(unlockedTables, weakKeys, {
+        difficultyScale: opts.difficultyScale,
+        mixedOnly: true,
+      })
+    }
+    return { base: pickMixedTableQuestion(unlockedTables, weakKeys), variant: 'standard' }
+  }
+  if (opts.expertMode) {
+    return pickExpertGameQuestion(unlockedTables, weakKeys, {
+      difficultyScale: opts.difficultyScale,
+      mixedOnly: false,
+    })
+  }
+  return pickGameQuestion(unlockedTables, weakKeys, {
+    advancedMode: opts.advancedMode,
+    difficultyScale: opts.difficultyScale,
+  })
+}
+
 export function pickGameQuestion(
   unlockedTables: TableId[],
   weakKeys: string[],

@@ -4,6 +4,7 @@ import { BadgesScreen } from '@/features/badges/BadgesScreen'
 import { BalloonGame } from '@/features/games/BalloonGame'
 import { BossGame } from '@/features/games/BossGame'
 import { GamesHub } from '@/features/games/GamesHub'
+import { MixedChallengeGame } from '@/features/games/MixedChallengeGame'
 import { MatchGame } from '@/features/games/MatchGame'
 import { MemoryGame } from '@/features/games/MemoryGame'
 import { SpeedGame } from '@/features/games/SpeedGame'
@@ -69,6 +70,7 @@ export default function App() {
         <Route path="/games/sprint" element={<SprintGame />} />
         <Route path="/games/speed" element={<SpeedGame />} />
         <Route path="/games/boss" element={<BossGame />} />
+        <Route path="/games/mixed" element={<MixedChallengeGame />} />
         <Route path="/review" element={<ReviewScreen />} />
         <Route path="/parent" element={<ParentPanel />} />
         <Route path="/badges" element={<BadgesScreen />} />
